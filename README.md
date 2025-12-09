@@ -1,6 +1,6 @@
 # Anvil Dice Engine (v0.9.0)
 
-**Anvil Dice Engine** is a high-fidelity, physics-based 3D dice rolling library built for the *Anvil & Loom* ecosystem. It features procedural geometry, advanced material shaders (glass, metal, holographic), and a robust parsing engine for complex TTRPG notation. Rebuilt from the ground up from Major Victory's dice engine as a source of inspiration, some logic, and sound files.
+**Anvil Dice Engine** is a high-fidelity, physics-based 3D dice rolling library built for the *Anvil & Loom* ecosystem. It features procedural geometry, advanced material shaders (glass, metal, holographic), and a robust parsing engine for complex TTRPG notation. Rebuilt from the ground up using Major Victory's dice engine as a source of inspiration, some logic, and sound files.
 
 > **Authors**: T Guiles & The Architect
 
