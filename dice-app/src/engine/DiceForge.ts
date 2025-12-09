@@ -184,7 +184,7 @@ export class DiceForge {
                 ctx.globalCompositeOperation = 'source-over';
             }
 
-            // 3. Text
+            // 3. Text (Color Map)
             ctx.fillStyle = labelColor;
             ctx.strokeStyle = outlineColor;
             ctx.lineWidth = 4;
@@ -192,40 +192,85 @@ export class DiceForge {
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.save(); ctx.translate(64, 64);
 
-            if (type === 'd4' && Array.isArray(labelText)) {
-                ctx.font = `bold 30px ${fontName}`;
-                let ts = 128;
-                for (let k = 0; k < labelText.length; k++) {
-                    ctx.strokeText(labelText[k], 0, -ts * 0.3);
-                    ctx.fillText(labelText[k], 0, -ts * 0.3);
-                    ctx.rotate(Math.PI * 2 / 3);
-                }
-            } else {
-                ctx.font = `bold 60px ${fontName}`;
-                let angleDeg = 0;
-                if (type === 'd8') angleDeg = (i % 2 === 0) ? -7.5 : -127.5;
-                else if (type === 'd10') angleDeg = -6;
-                else if (type === 'd12') angleDeg = 5;
-                else if (type === 'd20') angleDeg = -7.5;
-
-                if (angleDeg !== 0) ctx.rotate(angleDeg * Math.PI / 180);
-
-                let textStr = String(labelText);
-                if ((textStr === '6' || textStr === '9') && type !== 'd6') textStr += '.';
-
-                ctx.strokeText(textStr, 0, 0);
-                ctx.fillText(textStr, 0, 0);
+            // Font Scaling based on Family
+            let fontScale = 1.0;
+            if (fontName.includes('Faculty') || fontName.includes('Orbitron')) {
+                fontScale = 0.85;
+            } else if (fontName.includes('IM Fell')) {
+                fontScale = 1.15;
             }
+
+            // Draw Text Function (Reused for Bump)
+            const drawText = (context: CanvasRenderingContext2D) => {
+                if (type === 'd4' && Array.isArray(labelText)) {
+                    const fSize = Math.round(30 * fontScale);
+                    context.font = `bold ${fSize}px ${fontName}`;
+                    let ts = 128;
+                    for (let k = 0; k < labelText.length; k++) {
+                        context.strokeText(labelText[k], 0, -ts * 0.3);
+                        context.fillText(labelText[k], 0, -ts * 0.3);
+                        context.rotate(Math.PI * 2 / 3);
+                    }
+                } else {
+                    const fSize = Math.round(60 * fontScale);
+                    context.font = `bold ${fSize}px ${fontName}`;
+                    let angleDeg = 0;
+                    if (type === 'd8') angleDeg = (i % 2 === 0) ? -7.5 : -127.5;
+                    else if (type === 'd10') angleDeg = -6;
+                    else if (type === 'd12') angleDeg = 5;
+                    else if (type === 'd20') angleDeg = -7.5;
+
+                    if (angleDeg !== 0) context.rotate(angleDeg * Math.PI / 180);
+
+                    let textStr = String(labelText);
+                    if ((textStr === '6' || textStr === '9') && type !== 'd6') textStr += '.';
+
+                    context.strokeText(textStr, 0, 0);
+                    context.fillText(textStr, 0, 0);
+                }
+            };
+
+            drawText(ctx);
             ctx.restore();
 
             const tex = new THREE.CanvasTexture(canvas);
 
+            // --- Bump Map Generation ---
+            let bumpTex = tex; // Default to color map if no specific bump
+            if (textureDef && textureDef.bump) {
+                const canvasBump = document.createElement('canvas');
+                canvasBump.width = 128; canvasBump.height = 128;
+                const ctxBump = canvasBump.getContext('2d')!;
+
+                // 1. Background (White = High, unless texture says otherwise)
+                ctxBump.fillStyle = '#ffffff';
+                ctxBump.fillRect(0, 0, 128, 128);
+
+                // 2. Bump Texture
+                if (textureDef.bump) {
+                    ctxBump.drawImage(textureDef.bump, 0, 0, 128, 128);
+                }
+
+                // 3. Text (Engraved = Black)
+                ctxBump.fillStyle = '#000000';
+                ctxBump.strokeStyle = '#000000';
+                ctxBump.lineWidth = 4;
+                ctxBump.textAlign = 'center'; ctxBump.textBaseline = 'middle';
+
+                ctxBump.save(); ctxBump.translate(64, 64);
+                drawText(ctxBump); // Re-run draw logic with black fill
+                ctxBump.restore();
+
+                bumpTex = new THREE.CanvasTexture(canvasBump);
+            }
+
             // Use MeshPhysicalMaterial for advanced properties (Glass, Metal)
             const materialParams: THREE.MeshPhysicalMaterialParameters = {
                 map: tex,
+                bumpMap: bumpTex,
+                bumpScale: 0.08, // Strength of the bump effect
                 roughness,
                 metalness,
-                bumpScale: 0.05,
                 flatShading: true // CRITICAL: Ensures crisp edges, reducing "blob" look
             };
 

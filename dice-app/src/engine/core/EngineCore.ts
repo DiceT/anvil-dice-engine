@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SceneManager } from './SceneManager';
 import { PhysicsWorld } from './PhysicsWorld';
 import { RollController } from '../RollController';
+import { AudioManager } from '../audio/AudioManager';
 import type { AppSettings } from '../types';
 
 export class EngineCore {
@@ -75,6 +76,9 @@ export class EngineCore {
         // Update Physics World (Gravity & Surface)
         this.physicsWorld.setGravity(settings.physics.gravity);
         this.physicsWorld.setSurface(settings.physics.surface);
+
+        // Update Audio Volume
+        AudioManager.getInstance().setVolume(settings.soundVolume);
     }
 
     public destroy() {

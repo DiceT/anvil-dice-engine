@@ -29,3 +29,13 @@
 - **Date**: 2025-12-09
 - **Validation**: Verified by Browser Test (D6 result '2', D20 result '10' matched visuals).
 - **Notes**: Implemented face normal storage in `DiceForge`. Added velocity tracking and Vector Math (Dot Product) in `RollController` to detect "Up" face. Added UI to display rolling status and final results.
+
+## [x] 06_Settings_UI_And_Customization.md
+- **Date**: 2025-12-09
+- **Validation**: Verified by User/Browser ("Everything looks INCREDIBLE!").
+- **Notes**: Implemented full Settings implementation with `SettingsProvider` (Context/Hooks) and localStorage persistence.
+    - **Visuals**: Added Contrast Slider (Canvas Filter), Custom Fonts, and High-Fidelity Textures (Starmap, Metal, etc.).
+    - **Refinement**: Boosted Lighting (Ambient/Directional/Fill), enabled `flatShading` for crisp edges.
+    - **Glass**: Implemented specialized `MeshPhysicalMaterial` for Glass with `transparent: true`, `opacity: 0.85`, and `DoubleSide` rendering.
+    - **Physics**: Added Surface Material presets (Felt, Rubber, Glass) controlling friction/restitution.
+    - **Preview**: Integrated live `DicePreview` component in naming modal.

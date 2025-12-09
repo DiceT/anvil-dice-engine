@@ -22,12 +22,13 @@ export interface PhysicsSettings {
 export interface AppSettings {
     theme: DiceTheme;
     physics: PhysicsSettings;
+    soundVolume: number; // 0.0 - 1.0
 }
 
 export const DEFAULT_THEME: DiceTheme = {
     diceColor: '#dddddd',
     labelColor: '#000000',
-    outlineColor: '#000000', // Default usually no outline, but we support it
+    outlineColor: '#000000',
     texture: 'ledgerandink',
     material: 'plastic',
     font: 'Arial',
@@ -39,5 +40,11 @@ export const DEFAULT_PHYSICS: PhysicsSettings = {
     throwForce: 45,
     gravity: 9.81,
     surface: 'felt',
+    soundVolume: 0.5
+};
+
+export const DEFAULT_SETTINGS: AppSettings = {
+    theme: DEFAULT_THEME,
+    physics: DEFAULT_PHYSICS,
     soundVolume: 0.5
 };

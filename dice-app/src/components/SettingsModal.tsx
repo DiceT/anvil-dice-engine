@@ -10,7 +10,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, textures }) => {
-    const { settings, updateTheme, updatePhysics, resetSettings } = useSettings();
+    const { settings, updateTheme, updatePhysics, setSoundVolume, resetSettings } = useSettings();
     const [activeTab, setActiveTab] = useState<'appearance' | 'behavior'>('appearance');
 
     if (!isOpen) return null;
@@ -219,6 +219,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                     style={{ width: '100%' }}
                                 />
                                 <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>Standard Earth gravity is 9.8.</div>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', color: '#aaa' }}>Master Volume: {Math.round(settings.soundVolume * 100)}%</label>
+                                <input
+                                    type="range" min="0" max="1" step="0.05"
+                                    value={settings.soundVolume}
+                                    onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                                    style={{ width: '100%' }}
+                                />
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>Adjust sound effects volume (0 to mute).</div>
                             </div>
                         </div>
                     )}

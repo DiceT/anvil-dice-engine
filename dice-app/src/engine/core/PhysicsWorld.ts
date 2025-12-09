@@ -1,5 +1,6 @@
 import * as CANNON from 'cannon-es';
 import type { SurfaceMaterial } from '../types';
+import { AudioManager } from '../audio/AudioManager';
 
 export class PhysicsWorld {
     private world: CANNON.World;
@@ -9,6 +10,7 @@ export class PhysicsWorld {
     public readonly diceMaterial: CANNON.Material;
     private groundMaterial: CANNON.Material;
     private diceGroundContact: CANNON.ContactMaterial;
+    private currentSurface: SurfaceMaterial = 'felt';
 
     constructor() {
         this.world = new CANNON.World();
@@ -35,9 +37,32 @@ export class PhysicsWorld {
         groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
         this.world.addBody(groundBody);
 
+        // Audio Listener
+        groundBody.addEventListener('collide', this.handleGroundCollision);
+
         // Initial Walls (Default to Window Edge approx +/- 22 X, +/- 14 Z)
         this.updateBounds(44, 28);
     }
+
+    // Audio Handlers
+    private handleGroundCollision = (e: any) => {
+        const relativeVelocity = e.contact.getImpactVelocityAlongNormal();
+        if (Math.abs(relativeVelocity) > 0.5) {
+            console.log(`PhysicsWorld: Ground Hit. Vel: ${relativeVelocity.toFixed(2)}`);
+            AudioManager.getInstance().playSurfaceHit(Math.abs(relativeVelocity), this.currentSurface || 'felt');
+        }
+    };
+
+    private handleDiceCollision = (e: any) => {
+        const otherBody = e.body;
+        if (otherBody.mass > 0) {
+            const relativeVelocity = e.contact.getImpactVelocityAlongNormal();
+            if (Math.abs(relativeVelocity) > 0.5) {
+                console.log(`PhysicsWorld: Dice Hit. Vel: ${relativeVelocity.toFixed(2)}`);
+                AudioManager.getInstance().playDiceHit(Math.abs(relativeVelocity));
+            }
+        }
+    };
 
     public setGravity(g: number) {
         // We scale gravity by 20 to match our world scale
@@ -45,6 +70,7 @@ export class PhysicsWorld {
     }
 
     public setSurface(surface: SurfaceMaterial) {
+        this.currentSurface = surface;
         let friction = 0.3;
         let restitution = 0.3;
 
@@ -100,6 +126,8 @@ export class PhysicsWorld {
         body.quaternion.setFromEuler(rotation.x, rotation.y, rotation.z);
         this.world.addBody(body);
         this.walls.push(body);
+        // Audio
+        body.addEventListener('collide', this.handleGroundCollision);
     }
 
     public step(deltaTime: number) {
@@ -109,9 +137,11 @@ export class PhysicsWorld {
     public addBody(body: CANNON.Body) {
         this.world.addBody(body);
         this.bodies.push(body);
+        body.addEventListener('collide', this.handleDiceCollision);
     }
 
     public removeBody(body: CANNON.Body) {
+        body.removeEventListener('collide', this.handleDiceCollision);
         this.world.removeBody(body);
         const index = this.bodies.indexOf(body);
         if (index !== -1) {

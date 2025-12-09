@@ -6,6 +6,7 @@ interface SettingsContextType {
     settings: AppSettings;
     updateTheme: (updates: Partial<DiceTheme>) => void;
     updatePhysics: (updates: Partial<PhysicsSettings>) => void;
+    setSoundVolume: (volume: number) => void;
     resetSettings: () => void;
 }
 
@@ -15,7 +16,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Determine initial state (eventually from localStorage)
     const [settings, setSettings] = useState<AppSettings>(() => {
         const saved = localStorage.getItem('anvil_dice_settings');
-        return saved ? JSON.parse(saved) : { theme: DEFAULT_THEME, physics: DEFAULT_PHYSICS };
+        // Ensure soundVolume exists in legacy saves
+        const defaults = { theme: DEFAULT_THEME, physics: DEFAULT_PHYSICS, soundVolume: 0.5 };
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return { ...defaults, ...parsed };
+        }
+        return defaults;
     });
 
     // Save on Change
@@ -37,12 +44,16 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }));
     };
 
+    const setSoundVolume = (volume: number) => {
+        setSettings(prev => ({ ...prev, soundVolume: Math.max(0, Math.min(1, volume)) }));
+    };
+
     const resetSettings = () => {
-        setSettings({ theme: DEFAULT_THEME, physics: DEFAULT_PHYSICS });
+        setSettings({ theme: DEFAULT_THEME, physics: DEFAULT_PHYSICS, soundVolume: 0.5 });
     };
 
     return (
-        <SettingsContext.Provider value={{ settings, updateTheme, updatePhysics, resetSettings }}>
+        <SettingsContext.Provider value={{ settings, updateTheme, updatePhysics, setSoundVolume, resetSettings }}>
             {children}
         </SettingsContext.Provider>
     );
