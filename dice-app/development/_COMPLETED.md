@@ -35,7 +35,28 @@
 - **Validation**: Verified by User/Browser ("Everything looks INCREDIBLE!").
 - **Notes**: Implemented full Settings implementation with `SettingsProvider` (Context/Hooks) and localStorage persistence.
     - **Visuals**: Added Contrast Slider (Canvas Filter), Custom Fonts, and High-Fidelity Textures (Starmap, Metal, etc.).
-    - **Refinement**: Boosted Lighting (Ambient/Directional/Fill), enabled `flatShading` for crisp edges.
+    - **Refinement**: Boosted- [x] **Lighting & Shadows**
+  - Directional Light with Soft Shadows
+  - Ambient Light for base visibility
+  - Hemisphere Light for sky/ground contrast
     - **Glass**: Implemented specialized `MeshPhysicalMaterial` for Glass with `transparent: true`, `opacity: 0.85`, and `DoubleSide` rendering.
     - **Physics**: Added Surface Material presets (Felt, Rubber, Glass) controlling friction/restitution.
     - **Preview**: Integrated live `DicePreview` component in naming modal.
+
+## 05. Advanced Engine Features (Parsing & Physics)
+- [x] **Dice Parsing System**
+  - Implemented `DiceParser` class for `XdY + N` notation.
+  - Added support for `d%` (Percentile: Tens + Ones).
+  - Added support for `d66` (Tens D6 + Ones D6) and `d88` (Tens D8 + Ones D8).
+  - Consistent Summation Logic for special dice (e.g., `30 + 5 = 35`).
+
+- [x] **Physics & Logic Refinements**
+  - **Coin (d2)**: Reduced thickness to prevent edge-standing.
+  - **Visuals**: Added 6 new textures (Bone, Circuit, Glass, etc.).
+  - **Font Scaling**: Reduced font size (40%) for `d100`, `d80`, `d60` to fit double digits.
+  - **Debug**: Disabled debug borders by default.
+
+- [x] **API Layer**
+  - **DiceEngine Facade**: `initialize`, `roll`, `clear`, `setTheme`.
+  - **Structured Results**: `RollResult` object (Total, Breakdown, Modifiers).
+  - **Events**: `onRollComplete` event emission.
