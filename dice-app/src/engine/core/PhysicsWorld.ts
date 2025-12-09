@@ -1,14 +1,14 @@
 import * as CANNON from 'cannon-es';
-
+import type { SurfaceMaterial } from '../types';
 
 export class PhysicsWorld {
     private world: CANNON.World;
     private bodies: CANNON.Body[] = [];
     private walls: CANNON.Body[] = [];
 
-
     public readonly diceMaterial: CANNON.Material;
     private groundMaterial: CANNON.Material;
+    private diceGroundContact: CANNON.ContactMaterial;
 
     constructor() {
         this.world = new CANNON.World();
@@ -20,11 +20,11 @@ export class PhysicsWorld {
         this.diceMaterial = new CANNON.Material();
         this.groundMaterial = new CANNON.Material();
 
-        const diceGroundContact = new CANNON.ContactMaterial(this.diceMaterial, this.groundMaterial, {
+        this.diceGroundContact = new CANNON.ContactMaterial(this.diceMaterial, this.groundMaterial, {
             friction: 0.1,
             restitution: 0.5 // Bouncy
         });
-        this.world.addContactMaterial(diceGroundContact);
+        this.world.addContactMaterial(this.diceGroundContact);
 
         // Ground Plane Physics
         const groundBody = new CANNON.Body({
@@ -37,6 +37,30 @@ export class PhysicsWorld {
 
         // Initial Walls (Default to Window Edge approx +/- 22 X, +/- 14 Z)
         this.updateBounds(44, 28);
+    }
+
+    public setGravity(g: number) {
+        // We scale gravity by 20 to match our world scale
+        this.world.gravity.set(0, -g * 20, 0);
+    }
+
+    public setSurface(surface: SurfaceMaterial) {
+        let friction = 0.3;
+        let restitution = 0.3;
+
+        switch (surface) {
+            case 'felt': friction = 0.8; restitution = 0.1; break;
+            case 'wood': friction = 0.5; restitution = 0.3; break;
+            case 'rubber': friction = 0.9; restitution = 0.8; break;
+            case 'glass': friction = 0.1; restitution = 0.5; break;
+        }
+
+        this.diceGroundContact.friction = friction;
+        this.diceGroundContact.restitution = restitution;
+
+        // Also update wall contact? For now walls utilize diceMaterial so they might need their own contact or just share.
+        // Currently walls utilize diceMaterial (line 74), so dice hitting walls is dice-on-dice friction? 
+        // No, we haven't defined dice-dice contact. Default is used.
     }
 
     public updateBounds(width: number, depth: number) {

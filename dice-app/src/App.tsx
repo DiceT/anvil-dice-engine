@@ -1,8 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { EngineCore } from './engine/core/EngineCore';
-import { DiceColors } from './engine/DiceColors';
+import { DiceColors, TEXTURELIST } from './engine/DiceColors';
+import { SettingsProvider, useSettings } from './store/SettingsContext';
+import { SettingsModal } from './components/SettingsModal';
 
-function App() {
+// Helper to bridge React Settings -> Engine
+const SettingsSync: React.FC<{ engine: EngineCore | null }> = ({ engine }) => {
+    const { settings } = useSettings();
+    useEffect(() => {
+        if (engine) {
+            engine.updateSettings(settings);
+        }
+    }, [engine, settings]);
+    return null;
+};
+
+// Main App Internal (Logic)
+function InnerApp() {
     const containerRef = useRef<HTMLDivElement>(null);
     const engineRef = useRef<EngineCore | null>(null);
 
@@ -12,9 +26,12 @@ function App() {
     const [boundsWidth, setBoundsWidth] = useState(44);
     const [boundsDepth, setBoundsDepth] = useState(28);
     const [isAutoFit, setIsAutoFit] = useState(true);
-    const [showDebug, setShowDebug] = useState(true);
+    const [showDebug, setShowDebug] = useState(false); // Default off now that it's polished? Or keep on.
     const [rollResults, setRollResults] = useState<string[]>([]);
     const [isRolling, setIsRolling] = useState(false);
+
+    // Settings UI State
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // Initialize Engine (Run once)
     useEffect(() => {
@@ -42,7 +59,34 @@ function App() {
         };
     }, []);
 
-    // ... (auto fit effect stays)
+    // Effect for Auto-Fit
+    useEffect(() => {
+        const handleResize = () => {
+            if (isAutoFit && engineRef.current) {
+                const { width, depth } = engineRef.current.fitBoundsToScreen();
+                setBoundsWidth(Math.floor(width));
+                setBoundsDepth(Math.floor(depth));
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        // Initial fit
+        if (isAutoFit && engineRef.current) {
+            setTimeout(handleResize, 100);
+        }
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [isAutoFit]);
+
+    // Effect for Debug Visibility
+    useEffect(() => {
+        if (engineRef.current) {
+            engineRef.current.setDebugVisibility(showDebug);
+        }
+    }, [showDebug]);
 
     const handleRoll = () => {
         if (engineRef.current) {
@@ -70,13 +114,22 @@ function App() {
         // Effect will trigger auto update
     };
 
-    // ... (clear, update bounds)
+    const textureKeys = Object.keys(TEXTURELIST);
 
     return (
         <div
             ref={containerRef}
-            style={{ width: '100%', height: '100%', position: 'relative' }}
+            style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
         >
+            <SettingsSync engine={engineRef.current} />
+
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                textures={textureKeys}
+            />
+
+            {/* UI OVERLAY */}
             <div style={{
                 position: 'absolute',
                 top: 20,
@@ -85,12 +138,18 @@ function App() {
                 backgroundColor: 'rgba(0,0,0,0.6)',
                 padding: '15px',
                 borderRadius: '8px',
-                fontFamily: 'sans-serif'
+                fontFamily: 'sans-serif',
+                zIndex: 10
             }}>
-                <h2 style={{ margin: '0 0 10px 0' }}>Step 05: Dice Results</h2>
-
-                <div style={{ marginBottom: '10px' }}>
-                    <p>Loaded Textures: {loadedTextures.length > 0 ? "YES" : "Loading..."}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h2 style={{ margin: 0 }}>Anvil Dice</h2>
+                    <button
+                        onClick={() => setIsSettingsOpen(true)}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px' }}
+                        title="Settings"
+                    >
+                        ⚙️
+                    </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -98,7 +157,7 @@ function App() {
                         type="text"
                         value={rollNotation}
                         onChange={(e) => setRollNotation(e.target.value)}
-                        style={{ padding: '5px', borderRadius: '4px', border: 'none' }}
+                        style={{ padding: '5px', borderRadius: '4px', border: 'none', width: '60px' }}
                     />
                     <button onClick={handleRoll} disabled={isRolling} style={{ padding: '5px 10px', cursor: 'pointer' }}>
                         {isRolling ? '...' : 'ROLL'}
@@ -134,7 +193,7 @@ function App() {
                                 checked={isAutoFit}
                                 onChange={handleAutoFitToggle}
                             />
-                            Auto-Fit Canvas
+                            Auto
                         </label>
                     </div>
 
@@ -145,13 +204,7 @@ function App() {
                             value={boundsWidth}
                             onChange={(e) => setBoundsWidth(Number(e.target.value))}
                             disabled={isAutoFit}
-                            style={{
-                                width: '50px',
-                                padding: '5px',
-                                borderRadius: '4px',
-                                border: 'none',
-                                opacity: isAutoFit ? 0.5 : 1
-                            }}
+                            style={{ width: '40px', padding: '5px', borderRadius: '4px', border: 'none', opacity: isAutoFit ? 0.5 : 1 }}
                         />
                         <label>D:</label>
                         <input
@@ -159,26 +212,15 @@ function App() {
                             value={boundsDepth}
                             onChange={(e) => setBoundsDepth(Number(e.target.value))}
                             disabled={isAutoFit}
-                            style={{
-                                width: '50px',
-                                padding: '5px',
-                                borderRadius: '4px',
-                                border: 'none',
-                                opacity: isAutoFit ? 0.5 : 1
-                            }}
+                            style={{ width: '40px', padding: '5px', borderRadius: '4px', border: 'none', opacity: isAutoFit ? 0.5 : 1 }}
                         />
                     </div>
                     <button
                         onClick={handleUpdateBounds}
                         disabled={isAutoFit}
-                        style={{
-                            width: '100%',
-                            padding: '5px',
-                            cursor: isAutoFit ? 'default' : 'pointer',
-                            opacity: isAutoFit ? 0.5 : 1
-                        }}
+                        style={{ width: '100%', padding: '5px', cursor: isAutoFit ? 'default' : 'pointer', opacity: isAutoFit ? 0.5 : 1 }}
                     >
-                        UPDATE BOUNDS
+                        UPDATE
                     </button>
 
                     <div style={{ marginTop: '10px' }}>
@@ -188,7 +230,7 @@ function App() {
                                 checked={showDebug}
                                 onChange={(e) => setShowDebug(e.target.checked)}
                             />
-                            Show Debug Walls
+                            Show Debug
                         </label>
                     </div>
                 </div>
@@ -197,4 +239,10 @@ function App() {
     );
 }
 
-export default App;
+export default function App() {
+    return (
+        <SettingsProvider>
+            <InnerApp />
+        </SettingsProvider>
+    );
+}

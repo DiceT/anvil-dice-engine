@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { DiceForge } from './DiceForge';
 import { PhysicsWorld } from './core/PhysicsWorld';
+import type { DiceTheme, PhysicsSettings } from './types';
+import { DEFAULT_THEME, DEFAULT_PHYSICS } from './types';
 
 interface ActiveDie {
     mesh: THREE.Mesh;
@@ -18,6 +20,10 @@ export class RollController {
     private activeDice: ActiveDie[] = [];
     private bounds = { width: 44, depth: 28 };
 
+    // Settings
+    private currentTheme: DiceTheme = DEFAULT_THEME;
+    private currentPhysics: PhysicsSettings = DEFAULT_PHYSICS;
+
     // Callback for results
     public onRollComplete: ((results: any[]) => void) | null = null;
 
@@ -29,7 +35,17 @@ export class RollController {
         this.diceForge = new DiceForge();
     }
 
-    // ... (setBounds, roll, clear stay same, update `isRolling` in roll/clear)
+    public updateTheme(theme: DiceTheme) {
+        this.currentTheme = theme;
+    }
+
+    public updatePhysics(physics: PhysicsSettings) {
+        this.currentPhysics = physics;
+    }
+
+    public setBounds(width: number, depth: number) {
+        this.bounds = { width, depth };
+    }
 
     public roll(notation: string) {
         // Clear old dice first (Optionally? Or just add?)
@@ -39,9 +55,11 @@ export class RollController {
         if (this.onRollComplete) this.onRollComplete([]); // Reset UI
 
         // Simple parsing for "NdX" (e.g., "4d6", "1d20")
-        const match = notation.toLowerCase().match(/^(\d+)d(\d+)$/);
+        const cleanNotation = notation.trim().toLowerCase();
+        const match = cleanNotation.match(/^(\d+)d(\d+)$/);
+
         if (!match) {
-            console.error("Invalid notation. Use format 'NdX' (e.g. 4d6)");
+            console.error(`Invalid notation '${notation}'. Use format 'NdX' (e.g. 4d6)`);
             return;
         }
 
@@ -165,9 +183,12 @@ export class RollController {
 
     private spawnDie(type: string, _index: number, _total: number) {
         try {
-            const mesh = this.diceForge.createdice(type);
+            // Use Current Theme
+            const mesh = this.diceForge.createdice(type, this.currentTheme);
 
             // ... (setup code stays same) ...
+            // Wait, I need to verify I'm not overwriting too much.
+            // The bounds logic is fine.
 
             // ROLL FROM SIDE: Spawn at edge of CURRENT bounds
             const wallX = this.bounds.width / 2;
@@ -177,6 +198,7 @@ export class RollController {
             const spread = safeZ > 0 ? safeZ * 2 : 2;
 
             const x = spawnX + (Math.random() - 0.5) * 1;
+            // Spawn higher for "drop" feel if desired, but 2-3 is fine
             const y = 2 + Math.random() * 1;
             const z = (Math.random() - 0.5) * spread;
 
@@ -205,8 +227,11 @@ export class RollController {
                 Math.random() * Math.PI * 2
             );
 
-            // Add Force/Spin
-            const throwStrength = 36 + Math.random() * 5;
+            // Add Force/Spin from Settings
+            const baseForce = this.currentPhysics.throwForce || 40;
+            const throwStrength = baseForce + Math.random() * 5;
+
+            // Velocity towards center (negative X)
             const velocity = new CANNON.Vec3(-throwStrength, 0, (Math.random() - 0.5) * 2);
 
             body.velocity.copy(velocity);

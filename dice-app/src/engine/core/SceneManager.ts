@@ -24,15 +24,20 @@ export class SceneManager {
         this.controls.enablePan = false;    // Locked pan
 
         // Setup Lights
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         this.scene.add(this.ambientLight);
 
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
         this.directionalLight.position.set(5, 50, 5); // Overhead light
         this.directionalLight.castShadow = true;
         this.directionalLight.shadow.mapSize.width = 2048;
         this.directionalLight.shadow.mapSize.height = 2048;
         this.scene.add(this.directionalLight);
+
+        // Fill Light to brighten shadows
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        fillLight.position.set(-5, 20, -5);
+        this.scene.add(fillLight);
 
         // Setup Basic Tray (Floor + Walls)
         this.createTray();

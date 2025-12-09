@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { DiceColors } from './DiceColors';
+import type { DiceTheme } from './types';
+import { DEFAULT_THEME } from './types';
 
 export class DiceForge {
     private diceColors: DiceColors;
@@ -23,33 +25,36 @@ export class DiceForge {
         this.diceColors = new DiceColors();
     }
 
-    public createdice(type: string): THREE.Mesh {
+    public createdice(type: string, theme: DiceTheme = DEFAULT_THEME): THREE.Mesh {
         let geometry: THREE.Geometry;
         let baseLabels: string[] = [];
 
+        // Apply Scale from Theme
+        const scale = theme.scale || 1.0;
+
         switch (type) {
             case 'd4':
-                geometry = this.getGeometry('d4', 1.2);
+                geometry = this.getGeometry('d4', 1.2 * scale);
                 baseLabels = DiceForge.D4_LABELS;
                 break;
             case 'd6':
-                geometry = this.getGeometry('d6', 0.9);
+                geometry = this.getGeometry('d6', 0.9 * scale);
                 baseLabels = DiceForge.D6_LABELS;
                 break;
             case 'd8':
-                geometry = this.getGeometry('d8', 1.0);
+                geometry = this.getGeometry('d8', 1.0 * scale);
                 baseLabels = DiceForge.D8_LABELS;
                 break;
             case 'd10':
-                geometry = this.getGeometry('d10', 0.9);
+                geometry = this.getGeometry('d10', 0.9 * scale);
                 baseLabels = DiceForge.D10_LABELS;
                 break;
             case 'd12':
-                geometry = this.getGeometry('d12', 0.9);
+                geometry = this.getGeometry('d12', 0.9 * scale);
                 baseLabels = DiceForge.D12_LABELS;
                 break;
             case 'd20':
-                geometry = this.getGeometry('d20', 1.0);
+                geometry = this.getGeometry('d20', 1.0 * scale);
                 baseLabels = DiceForge.D20_LABELS;
                 break;
             default:
@@ -59,7 +64,7 @@ export class DiceForge {
         if (!geometry) throw new Error("Geometry failed");
 
         const labels = this.calculateLabels(type, baseLabels);
-        const materials = this.createMaterials(type, labels);
+        const materials = this.createMaterials(type, labels, theme);
         const mesh = new THREE.Mesh(geometry, materials);
 
         mesh.castShadow = true;
@@ -119,11 +124,32 @@ export class DiceForge {
         throw new Error(`Failed to create geometry for ${type}`);
     }
 
-    private createMaterials(type: string, labels: any[]): THREE.Material[] {
+    private createMaterials(type: string, labels: any[], theme: DiceTheme): THREE.Material[] {
         const materials: THREE.Material[] = [];
-        const labelColor = '#000000';
-        const diceColor = '#dddddd';
-        const textureDef = this.diceColors.getImage('ledgerandink');
+
+        // Theme Colors
+        const labelColor = theme.labelColor || '#000000';
+        const textureDef = this.diceColors.getImage(theme.texture);
+
+        // If texture is used, default base color to white so texture isn't darkened
+        // If no texture, keep grey default
+        const defaultBase = (textureDef && textureDef.texture) ? '#ffffff' : '#dddddd';
+        const diceColor = theme.diceColor || defaultBase;
+
+        const outlineColor = theme.outlineColor || '#000000';
+        const fontName = theme.font || 'Arial';
+
+        // Material Props
+        let roughness = 0.5;
+        let metalness = 0.1;
+
+        // Simple Material Mapping
+        switch (theme.material) {
+            case 'metal': roughness = 0.2; metalness = 0.8; break;
+            case 'wood': roughness = 0.8; metalness = 0.0; break;
+            case 'glass': roughness = 0.1; metalness = 0.1; break;
+            case 'plastic': default: roughness = 0.5; metalness = 0.1; break;
+        }
 
         for (let i = 0; i < labels.length; i++) {
             let labelText = labels[i];
@@ -132,7 +158,7 @@ export class DiceForge {
 
             if (isEdge) {
                 materials.push(new THREE.MeshStandardMaterial({
-                    color: diceColor, roughness: 0.5, metalness: 0.1, side: THREE.DoubleSide
+                    color: diceColor, roughness, metalness, side: THREE.DoubleSide
                 }));
                 continue;
             }
@@ -141,27 +167,41 @@ export class DiceForge {
             canvas.width = 128; canvas.height = 128;
             const ctx = canvas.getContext('2d')!;
 
+            // 1. Background Color
             ctx.fillStyle = diceColor; ctx.fillRect(0, 0, 128, 128);
 
+            // 2. Texture Overlay
             if (textureDef && textureDef.texture) {
                 ctx.globalCompositeOperation = 'multiply';
+
+                // Apply Contrast
+                const contrast = theme.textureContrast !== undefined ? theme.textureContrast : 1.0;
+                ctx.filter = `contrast(${contrast})`;
+
                 ctx.drawImage(textureDef.texture, 0, 0, 128, 128);
+
+                ctx.filter = 'none'; // Reset filter
                 ctx.globalCompositeOperation = 'source-over';
             }
 
+            // 3. Text
             ctx.fillStyle = labelColor;
+            ctx.strokeStyle = outlineColor;
+            ctx.lineWidth = 4;
+
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.save(); ctx.translate(64, 64);
 
             if (type === 'd4' && Array.isArray(labelText)) {
-                ctx.font = 'bold 30px Arial';
+                ctx.font = `bold 30px ${fontName}`;
                 let ts = 128;
                 for (let k = 0; k < labelText.length; k++) {
+                    ctx.strokeText(labelText[k], 0, -ts * 0.3);
                     ctx.fillText(labelText[k], 0, -ts * 0.3);
                     ctx.rotate(Math.PI * 2 / 3);
                 }
             } else {
-                ctx.font = 'bold 60px Arial';
+                ctx.font = `bold 60px ${fontName}`;
                 let angleDeg = 0;
                 if (type === 'd8') angleDeg = (i % 2 === 0) ? -7.5 : -127.5;
                 else if (type === 'd10') angleDeg = -6;
@@ -172,14 +212,33 @@ export class DiceForge {
 
                 let textStr = String(labelText);
                 if ((textStr === '6' || textStr === '9') && type !== 'd6') textStr += '.';
+
+                ctx.strokeText(textStr, 0, 0);
                 ctx.fillText(textStr, 0, 0);
             }
             ctx.restore();
 
             const tex = new THREE.CanvasTexture(canvas);
-            const mat = new THREE.MeshStandardMaterial({
-                map: tex, roughness: 0.5, metalness: 0.1, bumpScale: 0.05
-            });
+
+            // Use MeshPhysicalMaterial for advanced properties (Glass, Metal)
+            const materialParams: THREE.MeshPhysicalMaterialParameters = {
+                map: tex,
+                roughness,
+                metalness,
+                bumpScale: 0.05,
+                flatShading: true // CRITICAL: Ensures crisp edges, reducing "blob" look
+            };
+
+            if (theme.material === 'glass') {
+                materialParams.transparent = true;
+                materialParams.opacity = 0.85; // 85% opacity (Final User Choice)
+                materialParams.side = THREE.DoubleSide;
+                // depthWrite default is true
+                materialParams.transmission = 0.0;
+            }
+            // Note: For real glass refraction, we'd use transmission > 0...
+
+            const mat = new THREE.MeshPhysicalMaterial(materialParams);
             materials.push(mat);
         }
         return materials;

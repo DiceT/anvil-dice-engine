@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SceneManager } from './SceneManager';
 import { PhysicsWorld } from './PhysicsWorld';
 import { RollController } from '../RollController';
+import type { AppSettings } from '../types';
 
 export class EngineCore {
     private renderer: THREE.WebGLRenderer;
@@ -64,6 +65,16 @@ export class EngineCore {
 
     public setDebugVisibility(visible: boolean) {
         this.sceneManager.setDebugVisibility(visible);
+    }
+
+    public updateSettings(settings: AppSettings) {
+        // Update Roll Controller (Visuals & Throw Force)
+        this.rollController.updateTheme(settings.theme);
+        this.rollController.updatePhysics(settings.physics);
+
+        // Update Physics World (Gravity & Surface)
+        this.physicsWorld.setGravity(settings.physics.gravity);
+        this.physicsWorld.setSurface(settings.physics.surface);
     }
 
     public destroy() {

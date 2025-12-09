@@ -1,3 +1,13 @@
+/* Custom Fonts */
+@font-face { font-family: 'Cinzel'; src: url('/fonts/Cinzel-Medium.ttf'); font-weight: 500; font-style: normal; }
+@font-face { font-family: 'Faculty Glyphic'; src: url('/fonts/FacultyGlyphic-Regular.ttf'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'IM Fell English SC'; src: url('/fonts/IMFellEnglishSC-Regular.ttf'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Orbitron'; src: url('/fonts/Orbitron-Medium.ttf'); font-weight: 500; font-style: normal; }
+@font-face { font-family: 'Oxanium'; src: url('/fonts/Oxanium-Medium.ttf'); font-weight: 500; font-style: normal; }
+@font-face { font-family: 'Teko'; src: url('/fonts/Teko-Medium.ttf'); font-weight: 500; font-style: normal; }
+@font-face { font-family: 'Unica One'; src: url('/fonts/UnicaOne-Regular.ttf'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'Valkyrie'; src: url('/fonts/ValkyrieRegular-p7ZYy.ttf'); font-weight: 400; font-style: normal; }
+
 :root {
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
