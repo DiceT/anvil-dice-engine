@@ -13,12 +13,21 @@ function App() {
     const [boundsDepth, setBoundsDepth] = useState(28);
     const [isAutoFit, setIsAutoFit] = useState(true);
     const [showDebug, setShowDebug] = useState(true);
+    const [rollResults, setRollResults] = useState<string[]>([]);
+    const [isRolling, setIsRolling] = useState(false);
 
     // Initialize Engine (Run once)
     useEffect(() => {
         if (!containerRef.current) return;
 
         const engine = new EngineCore(containerRef.current);
+
+        // Setup Callback
+        engine.rollController.onRollComplete = (results) => {
+            setRollResults(results);
+            setIsRolling(false);
+        };
+
         engine.start();
         engineRef.current = engine;
 
@@ -33,37 +42,12 @@ function App() {
         };
     }, []);
 
-    // Handle Auto-Fit and Resize
-    useEffect(() => {
-        const checkAutoFit = () => {
-            if (isAutoFit && engineRef.current) {
-                const { width, depth } = engineRef.current.fitBoundsToScreen();
-                setBoundsWidth(Math.round(width));
-                setBoundsDepth(Math.round(depth));
-            }
-        };
-
-        if (engineRef.current) checkAutoFit();
-
-        const handleResize = () => {
-            checkAutoFit();
-        };
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
-    }, [isAutoFit]);
-
-    // Handle Debug Visibility
-    useEffect(() => {
-        if (engineRef.current) {
-            engineRef.current.setDebugVisibility(showDebug);
-        }
-    }, [showDebug]);
+    // ... (auto fit effect stays)
 
     const handleRoll = () => {
         if (engineRef.current) {
+            setIsRolling(true);
+            setRollResults([]); // Clear previous
             engineRef.current.rollController.roll(rollNotation);
         }
     };
@@ -86,6 +70,8 @@ function App() {
         // Effect will trigger auto update
     };
 
+    // ... (clear, update bounds)
+
     return (
         <div
             ref={containerRef}
@@ -101,7 +87,7 @@ function App() {
                 borderRadius: '8px',
                 fontFamily: 'sans-serif'
             }}>
-                <h2 style={{ margin: '0 0 10px 0' }}>Step 04: Roll Controller</h2>
+                <h2 style={{ margin: '0 0 10px 0' }}>Step 05: Dice Results</h2>
 
                 <div style={{ marginBottom: '10px' }}>
                     <p>Loaded Textures: {loadedTextures.length > 0 ? "YES" : "Loading..."}</p>
@@ -114,12 +100,29 @@ function App() {
                         onChange={(e) => setRollNotation(e.target.value)}
                         style={{ padding: '5px', borderRadius: '4px', border: 'none' }}
                     />
-                    <button onClick={handleRoll} style={{ padding: '5px 10px', cursor: 'pointer' }}>
-                        ROLL
+                    <button onClick={handleRoll} disabled={isRolling} style={{ padding: '5px 10px', cursor: 'pointer' }}>
+                        {isRolling ? '...' : 'ROLL'}
                     </button>
                     <button onClick={handleClear} style={{ padding: '5px 10px', cursor: 'pointer' }}>
                         CLEAR
                     </button>
+                </div>
+
+                {/* RESULT DISPLAY */}
+                <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px' }}>
+                    <h3 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
+                        Result: <span style={{ color: '#ffd700' }}>
+                            {rollResults.length > 0 ? rollResults.join(', ') : (isRolling ? 'Rolling...' : '-')}
+                        </span>
+                    </h3>
+                    {rollResults.length > 0 && (
+                        <div style={{ fontSize: '12px', color: '#aaa' }}>
+                            Total: {rollResults.reduce((acc, curr) => {
+                                const val = Number(curr);
+                                return acc + (isNaN(val) ? 0 : val);
+                            }, 0)}
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ marginTop: '15px', borderTop: '1px solid #555', paddingTop: '10px' }}>

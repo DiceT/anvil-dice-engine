@@ -66,6 +66,27 @@ export class DiceForge {
         mesh.receiveShadow = true;
         (mesh as any).body_shape = (geometry as any).cannon_shape;
 
+        // Store Face Normals and Values for Result Detection
+        mesh.userData.faceValues = [];
+        for (const face of geometry.faces) {
+            // Check bounds just in case
+            if (face.materialIndex >= 0 && face.materialIndex < labels.length) {
+                let value = labels[face.materialIndex];
+
+                // Skip materials representing edges (empty labels)
+                if (!value || (Array.isArray(value) && value.length === 0)) continue;
+
+                // For D4, the label is an array of numbers. We store the array.
+                // For others, it's a primitive (string/number).
+
+                // Store local normal and value
+                mesh.userData.faceValues.push({
+                    normal: face.normal.clone(),
+                    value: value
+                });
+            }
+        }
+
         return mesh;
     }
 

@@ -20,7 +20,12 @@
 - **Validation**: Verified by User ("Much better... Perfect").
 - **Notes**: Implemented `RollController` with side-roll physics (horizontal throw from edge, bounce). Refined environment with top-down camera, overhead lighting, transparent ground, and invisible physics walls. Fixed D6 numbering (no dot). Confirmed bounce with custom physics materials.
 
-## [x] 05_Bounds_And_Autofit.md
+## [x] 04.5_Bounds_And_Autofit.md
 - **Date**: 2025-12-09
 - **Validation**: Verified by User ("It does feel better... consider it COMPLETED").
-- **Notes**: Implemented "Auto-Fit Canvas" feature. System dynamically calculates visible frustum at table level and snaps physics walls to window edges. added UI controls for manual/auto override.
+- **Notes**: Implemented "Auto-Fit Canvas" feature. System dynamically calculates visible frustum at table level and snaps physics walls to window edges. Added UI controls for manual/auto override and a "Show Debug Walls" visibility toggle.
+ 
+## [x] 05_Result_Detection.md
+- **Date**: 2025-12-09
+- **Validation**: Verified by Browser Test (D6 result '2', D20 result '10' matched visuals).
+- **Notes**: Implemented face normal storage in `DiceForge`. Added velocity tracking and Vector Math (Dot Product) in `RollController` to detect "Up" face. Added UI to display rolling status and final results.
