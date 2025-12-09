@@ -150,7 +150,7 @@ export class DiceForge {
                 if (angleDeg !== 0) ctx.rotate(angleDeg * Math.PI / 180);
 
                 let textStr = String(labelText);
-                if (textStr === '6' || textStr === '9') textStr += '.';
+                if ((textStr === '6' || textStr === '9') && type !== 'd6') textStr += '.';
                 ctx.fillText(textStr, 0, 0);
             }
             ctx.restore();

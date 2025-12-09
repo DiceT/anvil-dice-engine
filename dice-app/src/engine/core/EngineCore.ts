@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { SceneManager } from './SceneManager';
 import { PhysicsWorld } from './PhysicsWorld';
+import { RollController } from '../RollController';
 
 export class EngineCore {
     private renderer: THREE.WebGLRenderer;
     public readonly sceneManager: SceneManager;
     public readonly physicsWorld: PhysicsWorld;
+    public readonly rollController: RollController;
     private animationId: number | null = null;
     private lastTime: number = 0;
 
@@ -23,6 +25,7 @@ export class EngineCore {
         // Initialize Systems
         this.sceneManager = new SceneManager(this.renderer.domElement);
         this.physicsWorld = new PhysicsWorld();
+        this.rollController = new RollController(this.physicsWorld, this.sceneManager.getScene());
 
         // Handle Resize
         window.addEventListener('resize', () => this.handleResize(container));
@@ -41,6 +44,28 @@ export class EngineCore {
         }
     }
 
+    public updateBounds(width: number, depth: number) {
+        this.physicsWorld.updateBounds(width, depth);
+        this.sceneManager.updateDebugBounds(width, depth);
+        this.rollController.setBounds(width, depth);
+    }
+
+    public fitBoundsToScreen() {
+        // Get visible bounds from scene
+        const { width, depth } = this.sceneManager.getVisibleBounds();
+
+        // Apply slightly padded bounds so walls are just OFF SCREEN
+        const padW = 0; // Exact fit
+        const padD = 0;
+
+        this.updateBounds(width + padW, depth + padD);
+        return { width: width + padW, depth: depth + padD };
+    }
+
+    public setDebugVisibility(visible: boolean) {
+        this.sceneManager.setDebugVisibility(visible);
+    }
+
     public destroy() {
         this.stop();
         if (this.renderer.domElement.parentElement) {
@@ -57,9 +82,8 @@ export class EngineCore {
         // Step Physics
         this.physicsWorld.step(deltaTime);
 
-        // Sync Physics to Visuals (Validation Step)
-        // In real app, DiceManager will handle this syncing
-        this.physicsWorld.syncDebugMeshes(this.sceneManager.getScene());
+        // Update Dice (Sync Physics -> Visuals)
+        this.rollController.update();
 
         // Render
         this.renderer.render(this.sceneManager.getScene(), this.sceneManager.getCamera());
