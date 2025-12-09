@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { DiceForge } from './DiceForge';
 import { PhysicsWorld } from './core/PhysicsWorld';
-import type { DiceTheme, PhysicsSettings } from './types';
+import { DiceParser } from './DiceParser';
+import type { DiceTheme, PhysicsSettings, RollResult } from './types';
 import { DEFAULT_THEME, DEFAULT_PHYSICS } from './types';
 
 interface ActiveDie {
@@ -10,6 +11,9 @@ interface ActiveDie {
     body: CANNON.Body;
     stopped: boolean;
     result: string | number | null;
+    groupId: number; // Index in ParseResult.groups
+    type: string;    // 'd6', 'd100', 'd%_tens', 'd%_ones'
+    rollId: number;  // Unique ID for this specific die spawn
 }
 
 export class RollController {
@@ -25,9 +29,11 @@ export class RollController {
     private currentPhysics: PhysicsSettings = DEFAULT_PHYSICS;
 
     // Callback for results
-    public onRollComplete: ((results: any[]) => void) | null = null;
+    public onRollComplete: ((result: RollResult) => void) | null = null;
 
     private isRolling = false;
+    private currentModifier = 0;
+    private currentNotation = "";
 
     constructor(physicsWorld: PhysicsWorld, scene: THREE.Scene) {
         this.physicsWorld = physicsWorld;
@@ -48,28 +54,37 @@ export class RollController {
     }
 
     public roll(notation: string) {
-        // Clear old dice first (Optionally? Or just add?)
-        // Usually reroll clears old ones.
         this.clear();
         this.isRolling = true;
-        if (this.onRollComplete) this.onRollComplete([]); // Reset UI
+        this.currentNotation = notation;
 
-        // Simple parsing for "NdX" (e.g., "4d6", "1d20")
-        const cleanNotation = notation.trim().toLowerCase();
-        const match = cleanNotation.match(/^(\d+)d(\d+)$/);
+        const parsed = DiceParser.parse(notation);
+        this.currentModifier = parsed.modifier;
 
-        if (!match) {
-            console.error(`Invalid notation '${notation}'. Use format 'NdX' (e.g. 4d6)`);
-            return;
-        }
+        // Reset UI via callback (optional, or wait for finish)
 
-        const count = parseInt(match[1], 10);
-        const sides = parseInt(match[2], 10);
-        const type = `d${sides}`;
+        // Spawn Dice
+        let dieKey = 0;
+        parsed.groups.forEach((group, groupIndex) => {
+            const count = Math.abs(group.count);
 
-        for (let i = 0; i < count; i++) {
-            this.spawnDie(type, i, count);
-        }
+            for (let i = 0; i < count; i++) {
+                if (group.type === 'd%') {
+                    this.spawnDie('d100', dieKey++, groupIndex, 'd%_tens');
+                    this.spawnDie('d10', dieKey++, groupIndex, 'd%_ones');
+                } else if (group.type === 'd66') {
+                    // d66 = d60 (Tens) + d6 (Ones)
+                    this.spawnDie('d60', dieKey++, groupIndex, 'd66_tens');
+                    this.spawnDie('d6', dieKey++, groupIndex, 'd66_ones');
+                } else if (group.type === 'd88') {
+                    // d88 = d80 (Tens) + d8 (Ones)
+                    this.spawnDie('d80', dieKey++, groupIndex, 'd88_tens');
+                    this.spawnDie('d8', dieKey++, groupIndex, 'd88_ones');
+                } else {
+                    this.spawnDie(group.type, dieKey++, groupIndex, group.type);
+                }
+            }
+        });
     }
 
     public clear() {
@@ -79,7 +94,8 @@ export class RollController {
         });
         this.activeDice = [];
         this.isRolling = false;
-        if (this.onRollComplete) this.onRollComplete([]);
+        this.currentModifier = 0;
+        this.currentNotation = "";
     }
 
     public update() {
@@ -112,10 +128,106 @@ export class RollController {
         if (allStopped && this.isRolling) {
             this.isRolling = false;
             console.log("All dice stopped.");
-            if (this.onRollComplete) {
-                const results = this.activeDice.map(d => d.result);
-                this.onRollComplete(results);
+            this.finishRoll();
+        }
+    }
+
+    private finishRoll() {
+        // Aggregate Results
+        let total = 0;
+        const breakdown: { type: string, value: number }[] = [];
+
+        // Group dice by groupId to handle d%
+        const groups = new Map<number, ActiveDie[]>();
+        this.activeDice.forEach(d => {
+            if (!groups.has(d.groupId)) groups.set(d.groupId, []);
+            groups.get(d.groupId)!.push(d);
+        });
+
+        groups.forEach((dice, _) => {
+            // Detect special types
+            // Just check the first die's type to guess group intent?
+            const firstType = dice[0]?.type || '';
+
+            if (firstType.startsWith('d%')) {
+                // Sort by ID to ensure pairs
+                dice.sort((a, b) => a.rollId - b.rollId);
+
+                for (let i = 0; i < dice.length; i += 2) {
+                    const tenDie = dice[i];
+                    const oneDie = dice[i + 1];
+
+                    if (tenDie && oneDie) {
+                        const tensStr = String(tenDie.result);
+                        const onesStr = String(oneDie.result);
+                        let tens = parseInt(tensStr.replace('00', '0'));
+                        let ones = parseInt(onesStr);
+                        if (isNaN(tens)) tens = 0;
+                        if (isNaN(ones)) ones = 0;
+
+                        let val = tens + ones;
+                        // d%: 00 + 0 = 100
+                        if (val === 0 && tensStr === '00' && onesStr === '0') val = 100;
+
+                        total += val;
+                        breakdown.push({ type: 'd%', value: val });
+                    }
+                }
+            } else if (firstType.startsWith('d66')) {
+                dice.sort((a, b) => a.rollId - b.rollId);
+                for (let i = 0; i < dice.length; i += 2) {
+                    const tenDie = dice[i];
+                    const oneDie = dice[i + 1];
+                    if (tenDie && oneDie) {
+                        const tens = parseInt(String(tenDie.result)) || 10;
+                        const ones = parseInt(String(oneDie.result)) || 1;
+                        // d60 returns 10..60. Just add.
+                        const val = tens + ones;
+                        total += val;
+                        breakdown.push({ type: 'd66', value: val });
+                    }
+                }
+            } else if (firstType.startsWith('d88')) {
+                dice.sort((a, b) => a.rollId - b.rollId);
+                for (let i = 0; i < dice.length; i += 2) {
+                    const tenDie = dice[i];
+                    const oneDie = dice[i + 1];
+                    if (tenDie && oneDie) {
+                        const tens = parseInt(String(tenDie.result)) || 10;
+                        const ones = parseInt(String(oneDie.result)) || 1;
+                        const val = tens + ones;
+                        total += val;
+                        breakdown.push({ type: 'd88', value: val });
+                    }
+                }
+            } else {
+                // Standard
+                dice.forEach(d => {
+                    let valStr = String(d.result);
+                    let val = parseInt(valStr);
+                    if (d.type === 'd10' && valStr === '0') val = 10;
+                    if (d.type === 'd100' && valStr === '00') val = 0;
+
+                    if (!isNaN(val)) {
+                        total += val;
+                        breakdown.push({ type: d.type, value: val });
+                    }
+                });
             }
+        });
+
+        // Add Modifier
+        total += this.currentModifier;
+
+        const result: RollResult = {
+            total: total,
+            notation: this.currentNotation,
+            breakdown: breakdown,
+            modifier: this.currentModifier
+        };
+
+        if (this.onRollComplete) {
+            this.onRollComplete(result);
         }
     }
 
@@ -177,18 +289,15 @@ export class RollController {
         }
     }
 
-
-
-    // ... getDieValue ...
-
-    private spawnDie(type: string, _index: number, _total: number) {
+    private spawnDie(type: string, rollId: number, groupId: number, subType: string) {
         try {
-            // Use Current Theme
-            const mesh = this.diceForge.createdice(type, this.currentTheme);
+            // If d%_tens or d%_ones, we need physical mesh for d100/d10
+            let meshType = type; // Default
+            if (subType === 'd%_tens') meshType = 'd100'; // Tens Die
+            if (subType === 'd%_ones') meshType = 'd10';  // Ones Die
 
-            // ... (setup code stays same) ...
-            // Wait, I need to verify I'm not overwriting too much.
-            // The bounds logic is fine.
+            // Use Current Theme
+            const mesh = this.diceForge.createdice(meshType, this.currentTheme);
 
             // ROLL FROM SIDE: Spawn at edge of CURRENT bounds
             const wallX = this.bounds.width / 2;
@@ -198,7 +307,6 @@ export class RollController {
             const spread = safeZ > 0 ? safeZ * 2 : 2;
 
             const x = spawnX + (Math.random() - 0.5) * 1;
-            // Spawn higher for "drop" feel if desired, but 2-3 is fine
             const y = 2 + Math.random() * 1;
             const z = (Math.random() - 0.5) * spread;
 
@@ -245,7 +353,10 @@ export class RollController {
                 mesh,
                 body,
                 stopped: false,
-                result: null
+                result: null,
+                groupId: groupId,
+                type: subType, // 'd%_tens', 'd10', etc.
+                rollId: rollId
             });
 
         } catch (e) {

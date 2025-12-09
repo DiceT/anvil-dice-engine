@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { EngineCore } from './engine/core/EngineCore';
 import { DiceColors, TEXTURELIST } from './engine/DiceColors';
 import { SettingsProvider, useSettings } from './store/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
+import type { RollResult } from './engine/types';
 
 // Helper to bridge React Settings -> Engine
 const SettingsSync: React.FC<{ engine: EngineCore | null }> = ({ engine }) => {
@@ -27,7 +28,7 @@ function InnerApp() {
     const [boundsDepth, setBoundsDepth] = useState(28);
     const [isAutoFit, setIsAutoFit] = useState(true);
     const [showDebug, setShowDebug] = useState(false); // Default off now that it's polished? Or keep on.
-    const [rollResults, setRollResults] = useState<string[]>([]);
+    const [rollResult, setRollResult] = useState<RollResult | null>(null);
     const [isRolling, setIsRolling] = useState(false);
 
     // Settings UI State
@@ -40,13 +41,16 @@ function InnerApp() {
         const engine = new EngineCore(containerRef.current);
 
         // Setup Callback
-        engine.rollController.onRollComplete = (results) => {
-            setRollResults(results);
+        engine.rollController.onRollComplete = (result) => {
+            setRollResult(result);
             setIsRolling(false);
         };
 
         engine.start();
         engineRef.current = engine;
+
+        // Initial Sync
+        engine.setDebugVisibility(showDebug);
 
         // Initialize Colors (Validation)
         new DiceColors((images) => {
@@ -91,7 +95,7 @@ function InnerApp() {
     const handleRoll = () => {
         if (engineRef.current) {
             setIsRolling(true);
-            setRollResults([]); // Clear previous
+            setRollResult(null); // Clear previous
             engineRef.current.rollController.roll(rollNotation);
         }
     };
@@ -99,6 +103,7 @@ function InnerApp() {
     const handleClear = () => {
         if (engineRef.current) {
             engineRef.current.rollController.clear();
+            setRollResult(null);
         }
     };
 
@@ -171,15 +176,21 @@ function InnerApp() {
                 <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px' }}>
                     <h3 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
                         Result: <span style={{ color: '#ffd700' }}>
-                            {rollResults.length > 0 ? rollResults.join(', ') : (isRolling ? 'Rolling...' : '-')}
+                            {rollResult ? rollResult.total : (isRolling ? 'Rolling...' : '-')}
                         </span>
                     </h3>
-                    {rollResults.length > 0 && (
-                        <div style={{ fontSize: '12px', color: '#aaa' }}>
-                            Total: {rollResults.reduce((acc, curr) => {
-                                const val = Number(curr);
-                                return acc + (isNaN(val) ? 0 : val);
-                            }, 0)}
+                    {rollResult && (
+                        <div style={{ fontSize: '12px', color: '#aaa', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {rollResult.breakdown.map((b, i) => (
+                                <span key={i} title={b.type} style={{ background: '#333', padding: '2px 4px', borderRadius: '3px' }}>
+                                    {b.value}
+                                </span>
+                            ))}
+                            {rollResult.modifier !== 0 && (
+                                <span style={{ background: '#334', padding: '2px 4px', borderRadius: '3px', color: '#aaf' }}>
+                                    {rollResult.modifier > 0 ? '+' : ''}{rollResult.modifier}
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>

@@ -17,6 +17,9 @@ export interface PhysicsSettings {
     gravity: number;        // ~9.8
     surface: SurfaceMaterial; // Presets for friction/restitution
     soundVolume: number;    // 0 - 1
+    spinForce: number;      // 0 - 20
+    wallRestitution: number; // 0 - 1
+    groundFriction: number; // 0 - 1
 }
 
 export interface AppSettings {
@@ -37,11 +40,25 @@ export const DEFAULT_THEME: DiceTheme = {
 };
 
 export const DEFAULT_PHYSICS: PhysicsSettings = {
-    throwForce: 45,
+    throwForce: 60,
     gravity: 9.81,
     surface: 'felt',
-    soundVolume: 0.5
+    soundVolume: 0.5,
+    spinForce: 15,
+    wallRestitution: 0.5,
+    groundFriction: 0.5
 };
+
+export interface RollResult {
+    total: number;
+    notation: string;
+    breakdown: {
+        type: string;
+        value: number;
+        dropped?: boolean;
+    }[];
+    modifier: number;
+}
 
 export const DEFAULT_SETTINGS: AppSettings = {
     theme: DEFAULT_THEME,

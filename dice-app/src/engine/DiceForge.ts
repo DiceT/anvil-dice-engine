@@ -9,9 +9,18 @@ export class DiceForge {
     private geometryCache: Record<string, THREE.Geometry> = {};
 
     // Standard Dice Maps
+    // D2 (Coin)
+    private static readonly D2_LABELS = ['1', '2'];
+    // D100: Matches D10 geometry pattern
+    private static readonly D100_LABELS = ['10', '20', '50', '40', '70', '60', '30', '80', '90', '00'];
+
     private static readonly D4_LABELS = ['1', '2', '3', '4'];
     private static readonly D6_LABELS = ['1', '2', '3', '4', '5', '6'];
+    private static readonly D60_LABELS = ['10', '20', '30', '40', '50', '60']; // Tens d6
+
     private static readonly D8_LABELS = ['1', '7', '5', '3', '6', '4', '2', '8'];
+    private static readonly D80_LABELS = ['10', '70', '50', '30', '60', '40', '20', '80']; // Tens d8
+
     // D10: Swapped 3<->5<->7 to fix order (1,5,7,3,9 -> 1,7,3,5,9)
     private static readonly D10_LABELS = ['1', '2', '5', '4', '7', '6', '3', '8', '9', '0'];
     private static readonly D12_LABELS = ['1', '11', '7', '9', '10', '5', '8', '3', '4', '6', '2', '12'];
@@ -33,20 +42,32 @@ export class DiceForge {
         const scale = theme.scale || 1.0;
 
         switch (type) {
+            case 'd2':
+                geometry = this.getGeometry('d2', 1.0 * scale);
+                baseLabels = DiceForge.D2_LABELS;
+                break;
             case 'd4':
-                geometry = this.getGeometry('d4', 1.2 * scale);
+                geometry = this.getGeometry('d4', 1.0 * scale);
                 baseLabels = DiceForge.D4_LABELS;
                 break;
             case 'd6':
-                geometry = this.getGeometry('d6', 0.9 * scale);
+                geometry = this.getGeometry('d6', 1.0 * scale);
                 baseLabels = DiceForge.D6_LABELS;
+                break;
+            case 'd60':
+                geometry = this.getGeometry('d6', 1.0 * scale);
+                baseLabels = DiceForge.D60_LABELS;
                 break;
             case 'd8':
                 geometry = this.getGeometry('d8', 1.0 * scale);
                 baseLabels = DiceForge.D8_LABELS;
                 break;
+            case 'd80':
+                geometry = this.getGeometry('d8', 1.0 * scale);
+                baseLabels = DiceForge.D80_LABELS;
+                break;
             case 'd10':
-                geometry = this.getGeometry('d10', 0.9 * scale);
+                geometry = this.getGeometry('d10', 1.0 * scale);
                 baseLabels = DiceForge.D10_LABELS;
                 break;
             case 'd12':
@@ -56,6 +77,10 @@ export class DiceForge {
             case 'd20':
                 geometry = this.getGeometry('d20', 1.0 * scale);
                 baseLabels = DiceForge.D20_LABELS;
+                break;
+            case 'd100':
+                geometry = this.getGeometry('d100', 1.0 * scale);
+                baseLabels = DiceForge.D100_LABELS;
                 break;
             default:
                 throw new Error(`Unknown dice type: ${type}`);
@@ -96,6 +121,12 @@ export class DiceForge {
     }
 
     private calculateLabels(type: string, baseLabels: string[]): any[] {
+        if (type === 'd2') {
+            // Edge (0), Face1 (1), Face2 (2)
+            // Geometry faces will have materialIndex 0 for edge, 1 for top, 2 for bottom?
+            // Or simpler: index 1 and 2 are top/bottom. 0 is edge.
+            return ['', baseLabels[0], baseLabels[1]];
+        }
         if (type === 'd4') {
             const a = baseLabels[0];
             const b = baseLabels[1];
@@ -104,7 +135,7 @@ export class DiceForge {
             return [[], [], [b, d, c], [a, c, d], [b, a, d], [a, b, c]];
         }
         const labels = [...baseLabels];
-        if (type === 'd10') { labels.unshift(''); }
+        if (type === 'd10' || type === 'd100') { labels.unshift(''); }
         else { labels.unshift(''); labels.unshift(''); }
         return labels;
     }
@@ -113,10 +144,12 @@ export class DiceForge {
         if (this.geometryCache[type]) return this.geometryCache[type];
         let geom: THREE.Geometry | null = null;
         switch (type) {
+            case 'd2': geom = this.create_d2_geometry(radius); break;
             case 'd4': geom = this.create_d4_geometry(radius); break;
             case 'd6': geom = this.create_d6_geometry(radius); break;
             case 'd8': geom = this.create_d8_geometry(radius); break;
             case 'd10': geom = this.create_d10_geometry(radius); break;
+            case 'd100': geom = this.create_d10_geometry(radius); break; // Reuse D10 geometry
             case 'd12': geom = this.create_d12_geometry(radius); break;
             case 'd20': geom = this.create_d20_geometry(radius); break;
         }
@@ -164,11 +197,11 @@ export class DiceForge {
             }
 
             const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
+            canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d')!;
 
             // 1. Background Color
-            ctx.fillStyle = diceColor; ctx.fillRect(0, 0, 128, 128);
+            ctx.fillStyle = diceColor; ctx.fillRect(0, 0, 256, 256);
 
             // 2. Texture Overlay
             if (textureDef && textureDef.texture) {
@@ -178,7 +211,7 @@ export class DiceForge {
                 const contrast = theme.textureContrast !== undefined ? theme.textureContrast : 1.0;
                 ctx.filter = `contrast(${contrast})`;
 
-                ctx.drawImage(textureDef.texture, 0, 0, 128, 128);
+                ctx.drawImage(textureDef.texture, 0, 0, 256, 256);
 
                 ctx.filter = 'none'; // Reset filter
                 ctx.globalCompositeOperation = 'source-over';
@@ -187,10 +220,10 @@ export class DiceForge {
             // 3. Text (Color Map)
             ctx.fillStyle = labelColor;
             ctx.strokeStyle = outlineColor;
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 8;
 
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.save(); ctx.translate(64, 64);
+            ctx.save(); ctx.translate(128, 128);
 
             // Font Scaling based on Family
             let fontScale = 1.0;
@@ -200,19 +233,23 @@ export class DiceForge {
                 fontScale = 1.15;
             }
 
+            // Reduce font size for double-digit dice types (d100, d80, d60)
+            if (type === 'd100' || type === 'd80' || type === 'd60') {
+                fontScale *= 0.6; // 40% reduction
+            }
             // Draw Text Function (Reused for Bump)
             const drawText = (context: CanvasRenderingContext2D) => {
                 if (type === 'd4' && Array.isArray(labelText)) {
-                    const fSize = Math.round(30 * fontScale);
+                    const fSize = Math.round(60 * fontScale);
                     context.font = `bold ${fSize}px ${fontName}`;
-                    let ts = 128;
+                    let ts = 256;
                     for (let k = 0; k < labelText.length; k++) {
                         context.strokeText(labelText[k], 0, -ts * 0.3);
                         context.fillText(labelText[k], 0, -ts * 0.3);
                         context.rotate(Math.PI * 2 / 3);
                     }
                 } else {
-                    const fSize = Math.round(60 * fontScale);
+                    const fSize = Math.round(120 * fontScale);
                     context.font = `bold ${fSize}px ${fontName}`;
                     let angleDeg = 0;
                     if (type === 'd8') angleDeg = (i % 2 === 0) ? -7.5 : -127.5;
@@ -239,25 +276,25 @@ export class DiceForge {
             let bumpTex = tex; // Default to color map if no specific bump
             if (textureDef && textureDef.bump) {
                 const canvasBump = document.createElement('canvas');
-                canvasBump.width = 128; canvasBump.height = 128;
+                canvasBump.width = 256; canvasBump.height = 256;
                 const ctxBump = canvasBump.getContext('2d')!;
 
                 // 1. Background (White = High, unless texture says otherwise)
                 ctxBump.fillStyle = '#ffffff';
-                ctxBump.fillRect(0, 0, 128, 128);
+                ctxBump.fillRect(0, 0, 256, 256);
 
                 // 2. Bump Texture
                 if (textureDef.bump) {
-                    ctxBump.drawImage(textureDef.bump, 0, 0, 128, 128);
+                    ctxBump.drawImage(textureDef.bump, 0, 0, 256, 256);
                 }
 
                 // 3. Text (Engraved = Black)
                 ctxBump.fillStyle = '#000000';
                 ctxBump.strokeStyle = '#000000';
-                ctxBump.lineWidth = 4;
+                ctxBump.lineWidth = 8;
                 ctxBump.textAlign = 'center'; ctxBump.textBaseline = 'middle';
 
-                ctxBump.save(); ctxBump.translate(64, 64);
+                ctxBump.save(); ctxBump.translate(128, 128);
                 drawText(ctxBump); // Re-run draw logic with black fill
                 ctxBump.restore();
 
@@ -376,6 +413,170 @@ export class DiceForge {
         }
         geom.computeFaceNormals();
         geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), radius);
+        if (CANNON) {
+            const points = geom.vertices.map(v => new CANNON.Vec3(v.x, v.y, v.z));
+            const facesC = geom.faces.map(f => [f.a, f.b, f.c]);
+            (geom as any).cannon_shape = new CANNON.ConvexPolyhedron({ vertices: points as any, faces: facesC as any });
+        }
+        return geom;
+    }
+
+    private create_d2_geometry(radius: number) {
+        const segments = 24; // Optimization: Reduced from 40 to 24 for physics stability
+        const h = 0.1 * radius; // THINNNER! Reduced from 0.2 to 0.1
+        const bevel = 0.05 * radius; // Bevel size
+        const r_outer = radius;
+        const r_inner = radius - bevel;
+        const h_inner = h;
+        const h_outer = h - bevel;
+
+        const geom = new THREE.Geometry();
+
+        // Vertex Indices Offset
+        let idx = 0;
+
+        // Vertices Helper
+        const pushVert = (x: number, y: number, z: number) => { geom.vertices.push(new THREE.Vector3(x, y, z)); return idx++; };
+
+        // 1. Top Center
+        const topCenter = pushVert(0, h, 0);
+        // 2. Bot Center
+        const botCenter = pushVert(0, -h, 0);
+
+        // Rings
+        const topInnerStart = idx;
+        for (let i = 0; i < segments; i++) {
+            const a = (i / segments) * Math.PI * 2;
+            pushVert(Math.cos(a) * r_inner, h_inner, Math.sin(a) * r_inner);
+        }
+        const topOuterStart = idx;
+        for (let i = 0; i < segments; i++) {
+            const a = (i / segments) * Math.PI * 2;
+            pushVert(Math.cos(a) * r_outer, h_outer, Math.sin(a) * r_outer);
+        }
+        const botOuterStart = idx;
+        for (let i = 0; i < segments; i++) {
+            const a = (i / segments) * Math.PI * 2;
+            pushVert(Math.cos(a) * r_outer, -h_outer, Math.sin(a) * r_outer);
+        }
+        const botInnerStart = idx;
+        for (let i = 0; i < segments; i++) {
+            const a = (i / segments) * Math.PI * 2;
+            pushVert(Math.cos(a) * r_inner, -h_inner, Math.sin(a) * r_inner);
+        }
+
+        const centerUV = new THREE.Vector2(0.5, 0.5);
+
+        // UV Logic: Top needs FLIP X (1-u). Bottom needs NORMAL (u).
+        const getUV_Top = (r_ratio: number, i: number) => {
+            const ang = (i / segments) * Math.PI * 2;
+            return new THREE.Vector2(0.5 - 0.5 * Math.cos(ang) * r_ratio, 0.5 + 0.5 * Math.sin(ang) * r_ratio);
+        };
+        const getUV_Bot = (r_ratio: number, i: number) => {
+            const ang = (i / segments) * Math.PI * 2;
+            return new THREE.Vector2(0.5 + 0.5 * Math.cos(ang) * r_ratio, 0.5 + 0.5 * Math.sin(ang) * r_ratio);
+        };
+
+        // --- FACES ---
+
+        // 1. Top Face (Center -> Inner)
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            const f = new THREE.Face3(topCenter, topInnerStart + next, topInnerStart + i);
+            f.materialIndex = 1;
+            geom.faces.push(f);
+            geom.faceVertexUvs[0].push([
+                centerUV,
+                getUV_Top(0.9, next),
+                getUV_Top(0.9, i)
+            ]);
+        }
+
+        // 2. Top Chamfer (Inner -> Outer)
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            const i1 = topInnerStart + i; const i2 = topInnerStart + next;
+            const o1 = topOuterStart + i; const o2 = topOuterStart + next;
+
+            // Quad: i1, i2, o2, o1. Split into 2 tris.
+            // Tri 1: i1, o2, o1 (Check winding: Inner is "Up". Outer is "Down". Normal Up/Out)
+            // Vector Inner->Outer is Out.
+            // CCW: i1->o2->o1?
+            const f1 = new THREE.Face3(i1, i2, o1); // i1->i2->o1
+            f1.materialIndex = 1; // Chamfer gets Face Color
+            geom.faces.push(f1);
+            geom.faceVertexUvs[0].push([getUV_Top(0.9, i), getUV_Top(0.9, next), getUV_Top(1.0, i)]);
+
+            const f2 = new THREE.Face3(i2, o2, o1);
+            f2.materialIndex = 1;
+            geom.faces.push(f2);
+            geom.faceVertexUvs[0].push([getUV_Top(0.9, next), getUV_Top(1.0, next), getUV_Top(1.0, i)]);
+        }
+
+        // 3. Side (Outer Top -> Outer Bot) - Material 0 (Edge)
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            const t1 = topOuterStart + i; const t2 = topOuterStart + next;
+            const b1 = botOuterStart + i; const b2 = botOuterStart + next;
+
+            // Quads
+            const f1 = new THREE.Face3(t1, b1, t2);
+            f1.materialIndex = 0;
+            geom.faces.push(f1);
+            geom.faceVertexUvs[0].push([new THREE.Vector2(0, 1), new THREE.Vector2(0, 0), new THREE.Vector2(1, 1)]);
+
+            const f2 = new THREE.Face3(t2, b1, b2);
+            f2.materialIndex = 0;
+            geom.faces.push(f2);
+            geom.faceVertexUvs[0].push([new THREE.Vector2(1, 1), new THREE.Vector2(0, 0), new THREE.Vector2(1, 0)]);
+        }
+
+        // 4. Bot Chamfer (Outer -> Inner) - Material 2
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            const o1 = botOuterStart + i; const o2 = botOuterStart + next;
+            const i1 = botInnerStart + i; const i2 = botInnerStart + next;
+
+            // Winding: Pointing Down.
+            // CCW from Bottom. CW from Top.
+            // i1->i2 is CW from top?
+            // Let's use logic from Top and flip.
+            // Top: i1, i2, o1. 
+            // Bot: i1, o1, i2?
+
+            const f1 = new THREE.Face3(i1, o1, i2);
+            f1.materialIndex = 2;
+            geom.faces.push(f1);
+            geom.faceVertexUvs[0].push([getUV_Bot(0.9, i), getUV_Bot(1.0, i), getUV_Bot(0.9, next)]);
+
+            const f2 = new THREE.Face3(o1, o2, i2);
+            f2.materialIndex = 2;
+            geom.faces.push(f2);
+            geom.faceVertexUvs[0].push([getUV_Bot(1.0, i), getUV_Bot(1.0, next), getUV_Bot(0.9, next)]);
+        }
+
+        // 5. Bot Face (Inner -> Center)
+        for (let i = 0; i < segments; i++) {
+            const next = (i + 1) % segments;
+            // Top was: Center, Next, i
+            // Bot should include reverse?
+            // Bot viewed from top is CW (Center, i, Next).
+            // Normal needs to point Down.
+            // Center->i->Next is CW? No, Center->Next->i is CCW.
+            // So Center->i->Next is CW (Down).
+            const f = new THREE.Face3(botCenter, i + botInnerStart, next + botInnerStart);
+            f.materialIndex = 2;
+            geom.faces.push(f);
+            geom.faceVertexUvs[0].push([
+                centerUV,
+                getUV_Bot(0.9, i),
+                getUV_Bot(0.9, next)
+            ]);
+        }
+
+        geom.computeFaceNormals();
+        geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), radius);
+
         if (CANNON) {
             const points = geom.vertices.map(v => new CANNON.Vec3(v.x, v.y, v.z));
             const facesC = geom.faces.map(f => [f.a, f.b, f.c]);

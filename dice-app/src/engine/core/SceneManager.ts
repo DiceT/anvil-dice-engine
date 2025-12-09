@@ -86,24 +86,28 @@ export class SceneManager {
         // Top (-Z)
         const topWall = new THREE.Mesh(horizWallGeo, material);
         topWall.position.set(0, 0, -offsetZ);
+        topWall.visible = false; // Default Hidden
         this.scene.add(topWall);
         this.debugWalls.push(topWall);
 
         // Bottom (+Z)
         const botWall = new THREE.Mesh(horizWallGeo, material);
         botWall.position.set(0, 0, offsetZ);
+        botWall.visible = false; // Default Hidden
         this.scene.add(botWall);
         this.debugWalls.push(botWall);
 
         // Left (-X)
         const leftWall = new THREE.Mesh(vertWallGeo, material);
         leftWall.position.set(-offsetX, 0, 0);
+        leftWall.visible = false; // Default Hidden
         this.scene.add(leftWall);
         this.debugWalls.push(leftWall);
 
         // Right (+X)
         const rightWall = new THREE.Mesh(vertWallGeo, material);
         rightWall.position.set(offsetX, 0, 0);
+        rightWall.visible = false; // Default Hidden
         this.scene.add(rightWall);
         this.debugWalls.push(rightWall);
     }
