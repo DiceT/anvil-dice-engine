@@ -1,4 +1,4 @@
-import type { ColorSet, ImageEntry, TextureDefinition } from './DiceTypes';
+import type { ImageEntry, TextureDefinition } from './DiceTypes';
 
 // Explicit list of textures available in public/textures/
 export const TEXTURELIST: { [key: string]: TextureDefinition } = {

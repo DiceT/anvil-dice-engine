@@ -4,8 +4,8 @@ import { PhysicsWorld } from './PhysicsWorld';
 
 export class EngineCore {
     private renderer: THREE.WebGLRenderer;
-    private sceneManager: SceneManager;
-    private physicsWorld: PhysicsWorld;
+    public readonly sceneManager: SceneManager;
+    public readonly physicsWorld: PhysicsWorld;
     private animationId: number | null = null;
     private lastTime: number = 0;
 

@@ -4,13 +4,13 @@ import * as THREE from 'three';
 export class PhysicsWorld {
     private world: CANNON.World;
     private bodies: CANNON.Body[] = [];
-    private debugMeshes: Map<number, THREE.Mesh> = new Map();
+
 
     constructor() {
         this.world = new CANNON.World();
         this.world.gravity.set(0, -9.82 * 20, 0); // Scaled gravity for dice feel
         this.world.broadphase = new CANNON.NaiveBroadphase();
-        this.world.solver.iterations = 10;
+        (this.world.solver as any).iterations = 10;
 
         // Ground Plane Physics
         const groundBody = new CANNON.Body({

@@ -25,19 +25,16 @@ export class DiceForge {
 
     public createdice(type: string): THREE.Mesh {
         let geometry: THREE.Geometry;
-        let scale = 1.0;
         let baseLabels: string[] = [];
 
         switch (type) {
             case 'd4':
                 geometry = this.getGeometry('d4', 1.2);
                 baseLabels = DiceForge.D4_LABELS;
-                scale = 1.2;
                 break;
             case 'd6':
                 geometry = this.getGeometry('d6', 0.9);
                 baseLabels = DiceForge.D6_LABELS;
-                scale = 0.9;
                 break;
             case 'd8':
                 geometry = this.getGeometry('d8', 1.0);
@@ -46,12 +43,10 @@ export class DiceForge {
             case 'd10':
                 geometry = this.getGeometry('d10', 0.9);
                 baseLabels = DiceForge.D10_LABELS;
-                scale = 0.9;
                 break;
             case 'd12':
                 geometry = this.getGeometry('d12', 0.9);
                 baseLabels = DiceForge.D12_LABELS;
-                scale = 0.9;
                 break;
             case 'd20':
                 geometry = this.getGeometry('d20', 1.0);
@@ -64,7 +59,7 @@ export class DiceForge {
         if (!geometry) throw new Error("Geometry failed");
 
         const labels = this.calculateLabels(type, baseLabels);
-        const materials = this.createMaterials(type, labels, scale);
+        const materials = this.createMaterials(type, labels);
         const mesh = new THREE.Mesh(geometry, materials);
 
         mesh.castShadow = true;
@@ -103,7 +98,7 @@ export class DiceForge {
         throw new Error(`Failed to create geometry for ${type}`);
     }
 
-    private createMaterials(type: string, labels: any[], size: number): THREE.Material[] {
+    private createMaterials(type: string, labels: any[]): THREE.Material[] {
         const materials: THREE.Material[] = [];
         const labelColor = '#000000';
         const diceColor = '#dddddd';
@@ -169,11 +164,11 @@ export class DiceForge {
         return materials;
     }
 
-    private create_geom(vertices: any[], faces: any[], radius: number, tab: number, af: number, aa: number): THREE.Geometry {
+    private create_geom(vertices: any[], faces: any[], radius: number, tab: number, af: number): THREE.Geometry {
         return this.make_geom(vertices, faces, radius, tab, af);
     }
 
-    private make_geom(vertices: THREE.Vector3[], faces: number[][], radius: number, tab: number, af: number) {
+    private make_geom(vertices: any[], faces: number[][], radius: number, tab: number, af: number) {
         var geom = new THREE.Geometry();
         for (var i = 0; i < vertices.length; ++i) {
             // FIX: Normalize vertices before scaling to ensure consistent radius
@@ -185,7 +180,7 @@ export class DiceForge {
             var aa = Math.PI * 2 / fl;
             for (var j = 0; j < fl - 2; ++j) {
                 geom.faces.push(new THREE.Face3(ii[0], ii[j + 1], ii[j + 2], [geom.vertices[ii[0]],
-                geom.vertices[ii[j + 1]], geom.vertices[ii[j + 2]]], 0, ii[fl] + 1));
+                geom.vertices[ii[j + 1]], geom.vertices[ii[j + 2]]], undefined, ii[fl] + 1));
                 if (ii[fl] !== -1) {
                     geom.faceVertexUvs[0].push([
                         new THREE.Vector2((Math.cos(af) + 1 + tab) / 2 / (1 + tab),
@@ -229,7 +224,7 @@ export class DiceForge {
 
             for (var j = 0; j < fl - 2; ++j) {
                 geom.faces.push(new THREE.Face3(ii[0], ii[j + 1], ii[j + 2], [geom.vertices[ii[0]],
-                geom.vertices[ii[j + 1]], geom.vertices[ii[j + 2]]], 0, ii[fl] + 1));
+                geom.vertices[ii[j + 1]], geom.vertices[ii[j + 2]]], undefined, ii[fl] + 1));
 
                 if (faces[i][faces[i].length - 1] == -1 || j >= 2) {
                     geom.faceVertexUvs[0].push([
@@ -267,7 +262,7 @@ export class DiceForge {
     private create_d4_geometry(radius: number) {
         var vertices = [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]];
         var faces = [[1, 0, 2, 1], [0, 1, 3, 2], [0, 3, 2, 3], [1, 2, 3, 4]];
-        return this.create_geom(vertices, faces, radius, -0.1, Math.PI * 7 / 6, 0.96);
+        return this.create_geom(vertices, faces, radius, -0.1, Math.PI * 7 / 6);
     }
 
     private create_d6_geometry(radius: number) {
@@ -275,14 +270,14 @@ export class DiceForge {
         [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
         var faces = [[0, 3, 2, 1, 1], [1, 2, 6, 5, 2], [0, 1, 5, 4, 3],
         [3, 7, 6, 2, 4], [0, 4, 7, 3, 5], [4, 5, 6, 7, 6]];
-        return this.create_geom(vertices, faces, radius, 0.1, Math.PI / 4, 0.96);
+        return this.create_geom(vertices, faces, radius, 0.1, Math.PI / 4);
     }
 
     private create_d8_geometry(radius: number) {
         var vertices = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
         var faces = [[0, 2, 4, 1], [0, 4, 3, 2], [0, 3, 5, 3], [0, 5, 2, 4], [1, 3, 4, 5],
         [1, 4, 2, 6], [1, 2, 5, 7], [1, 5, 3, 8]];
-        return this.create_geom(vertices, faces, radius, 0, -Math.PI / 4 / 2, 0.965);
+        return this.create_geom(vertices, faces, radius, 0, -Math.PI / 4 / 2);
     }
 
     private create_d10_geometry(radius: number) {
@@ -309,7 +304,7 @@ export class DiceForge {
         var faces = [[2, 14, 4, 12, 0, 1], [15, 9, 11, 19, 3, 2], [16, 10, 17, 7, 6, 3], [6, 7, 19, 11, 18, 4],
         [6, 18, 2, 0, 16, 5], [18, 11, 9, 14, 2, 6], [1, 17, 10, 8, 13, 7], [1, 13, 5, 15, 3, 8],
         [13, 8, 12, 4, 5, 9], [5, 4, 14, 9, 15, 10], [0, 12, 8, 10, 16, 11], [3, 19, 7, 17, 1, 12]];
-        return this.create_geom(vertices, faces, radius, 0.2, -Math.PI / 4 / 2, 0.968);
+        return this.create_geom(vertices, faces, radius, 0.2, -Math.PI / 4 / 2);
     }
 
     private create_d20_geometry(radius: number) {
@@ -321,6 +316,6 @@ export class DiceForge {
         [1, 5, 9, 6], [5, 11, 4, 7], [11, 10, 2, 8], [10, 7, 6, 9], [7, 1, 8, 10],
         [3, 9, 4, 11], [3, 4, 2, 12], [3, 2, 6, 13], [3, 6, 8, 14], [3, 8, 9, 15],
         [4, 9, 5, 16], [2, 4, 11, 17], [6, 2, 10, 18], [8, 6, 7, 19], [9, 8, 1, 20]];
-        return this.create_geom(vertices, faces, radius, -0.2, -Math.PI / 4 / 2, 0.955);
+        return this.create_geom(vertices, faces, radius, -0.2, -Math.PI / 4 / 2);
     }
 }
