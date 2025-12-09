@@ -21,6 +21,8 @@ export const TEXTURELIST: { [key: string]: TextureDefinition } = {
     'tapestry': { name: 'Tapestry', composite: 'multiply', source: '/textures/tapestry.png', bump: '/textures/tapestry-bump.png', material: 'cloth' },
     'treering': { name: 'Tree Ring', composite: 'multiply', source: '/textures/treering.png', bump: '/textures/treering-bump.png', material: 'wood' },
     'wovenlinen': { name: 'Woven Linen', composite: 'multiply', source: '/textures/wovenlinen.png', bump: '/textures/wovenlinen-bump.png', material: 'cloth' },
+    'thearchitect': { name: 'The Architect', composite: 'multiply', source: '/textures/thearchitect.png', bump: '/textures/thearchitect-bump.png', material: 'metal' },
+    'eldritchvein': { name: 'Eldritch Vein', composite: 'multiply', source: '/textures/eldritchvein.png', bump: '/textures/eldritchvein-bump.png', material: 'metal' },
 };
 
 // Global cache to persist loaded images across engine restarts

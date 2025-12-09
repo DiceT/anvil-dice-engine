@@ -1,5 +1,2 @@
-Thumbs.db
-.DS_Store
-/textures/Thumbs.db
-*.sublime-workspace
-*.sublime-project
+# Ignore reference_dicebox folder at repository root
+reference_dicebox/

@@ -23,6 +23,7 @@ coverage
 *.lcov
 test-results
 
+reference_dicebox/
 # Editor
 .vscode/*
 !.vscode/extensions.json
