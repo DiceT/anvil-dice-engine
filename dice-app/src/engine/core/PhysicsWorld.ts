@@ -32,20 +32,10 @@ export class PhysicsWorld {
             position: new CANNON.Vec3(0, 20, 0)
         });
 
-        // Debug Visual
-        const mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 4, 4),
-            new THREE.MeshStandardMaterial({ color: 0x0000ff })
-        );
-        mesh.castShadow = true;
-
-        // Store for syncing
+        // Initialize Body
+        // (Debug cube removed)
         this.bodies.push(body);
         this.world.addBody(body);
-
-        // We attach user data to body to find mesh later, 
-        // or just maintain a map for this debug step.
-        (body as any).mesh = mesh;
     }
 
     public step(deltaTime: number) {
