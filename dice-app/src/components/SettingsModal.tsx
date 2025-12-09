@@ -17,19 +17,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
 
     // Helper for Surface Material Preset Logic
     const setSurface = (surface: SurfaceMaterial) => {
-        let friction = 0.3;
-        let restitution = 0.3;
-
-        switch (surface) {
-            case 'felt': friction = 0.8; restitution = 0.1; break;
-            case 'wood': friction = 0.5; restitution = 0.3; break;
-            case 'rubber': friction = 0.9; restitution = 0.8; break; // Bouncy
-            case 'glass': friction = 0.1; restitution = 0.5; break;  // Slippery
-        }
-
-        // We might need to add friction/restitution to PhysicsSettings interface if we want to track them
-        // For now just storing the surface name. 
-        // NOTE: Engine will need to read this surface name and apply physics values.
         updatePhysics({ surface });
     };
 

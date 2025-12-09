@@ -22,7 +22,7 @@ function InnerApp() {
     const engineRef = useRef<EngineCore | null>(null);
 
     // State
-    const [loadedTextures, setLoadedTextures] = useState<string[]>([]);
+
     const [rollNotation, setRollNotation] = useState("4d6");
     const [boundsWidth, setBoundsWidth] = useState(44);
     const [boundsDepth, setBoundsDepth] = useState(28);
@@ -53,12 +53,7 @@ function InnerApp() {
         engine.setDebugVisibility(showDebug);
 
         // Initialize Colors (Validation)
-        new DiceColors((images) => {
-            const names = Object.keys(images).filter(k => images[k].texture);
-            setLoadedTextures(names);
-        });
-
-        return () => {
+        new DiceColors(); return () => {
             engine.destroy();
         };
     }, []);
