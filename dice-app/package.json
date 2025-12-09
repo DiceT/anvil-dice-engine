@@ -1,8 +1,11 @@
 {
-  "name": "dice-app",
+  "name": "anvil-dice-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.9.0",
   "type": "module",
+  "author": "T Guiles and The Architect",
+  "description": "Advanced 3D Dice Engine for Anvil & Loom",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "vite",
     "server": "tsx server/index.ts",
