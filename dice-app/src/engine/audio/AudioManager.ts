@@ -76,21 +76,21 @@ export class AudioManager {
 
         // Load Dice Hits
         for (let i = 1; i <= this.assets.dicehits; i++) {
-            promises.push(loadBuffer(`/sounds/dicehit${i}.wav`, `dicehit${i}`));
+            promises.push(loadBuffer(`sounds/dicehit${i}.wav`, `dicehit${i}`));
         }
 
         // Load Surfaces
         // Felt
         for (let i = 1; i <= this.assets.surfaces.felt; i++) {
-            promises.push(loadBuffer(`/sounds/felt/surface_felt${i}.wav`, `felt${i}`));
+            promises.push(loadBuffer(`sounds/felt/surface_felt${i}.wav`, `felt${i}`));
         }
         // Wood (Tray)
         for (let i = 1; i <= this.assets.surfaces.wood_tray; i++) {
-            promises.push(loadBuffer(`/sounds/wood_tray/surface_wood_tray${i}.wav`, `wood${i}`));
+            promises.push(loadBuffer(`sounds/wood_tray/surface_wood_tray${i}.wav`, `wood${i}`));
         }
         // Metal
         for (let i = 1; i <= this.assets.surfaces.metal; i++) {
-            promises.push(loadBuffer(`/sounds/metal/surface_metal${i}.wav`, `metal${i}`));
+            promises.push(loadBuffer(`sounds/metal/surface_metal${i}.wav`, `metal${i}`));
         }
 
         await Promise.all(promises);
