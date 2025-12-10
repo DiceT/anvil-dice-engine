@@ -92,7 +92,12 @@ function InnerApp() {
         if (engineRef.current) {
             setIsRolling(true);
             setRollResult(null);
-            engineRef.current.rollController.roll(rollNotation);
+            try {
+                engineRef.current.rollController.roll(rollNotation);
+            } catch (e) {
+                console.error("Roll failed:", e);
+                setIsRolling(false);
+            }
         }
     };
 
@@ -101,6 +106,7 @@ function InnerApp() {
             engineRef.current.rollController.clear();
             setRollResult(null);
             setRollNotation("");
+            setIsRolling(false);
         }
     };
 
