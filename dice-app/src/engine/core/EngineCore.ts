@@ -22,6 +22,8 @@ export class EngineCore {
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Fix Color Space (r124 uses older naming)
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
         container.appendChild(this.renderer.domElement);
 
         // Initialize Systems

@@ -22,14 +22,14 @@ function InnerApp() {
     const engineRef = useRef<EngineCore | null>(null);
 
     // State
-
     const [rollNotation, setRollNotation] = useState("4d6");
     const [boundsWidth, setBoundsWidth] = useState(44);
     const [boundsDepth, setBoundsDepth] = useState(28);
     const [isAutoFit, setIsAutoFit] = useState(true);
-    const [showDebug, setShowDebug] = useState(false); // Default off now that it's polished? Or keep on.
+    // Debug removed for now
     const [rollResult, setRollResult] = useState<RollResult | null>(null);
     const [isRolling, setIsRolling] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Settings UI State
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -40,7 +40,6 @@ function InnerApp() {
 
         const engine = new EngineCore(containerRef.current);
 
-        // Setup Callback
         engine.rollController.onRollComplete = (result) => {
             setRollResult(result);
             setIsRolling(false);
@@ -48,14 +47,28 @@ function InnerApp() {
 
         engine.start();
         engineRef.current = engine;
+        engine.setDebugVisibility(false);
+        new DiceColors();
 
-        // Initial Sync
-        engine.setDebugVisibility(showDebug);
-
-        // Initialize Colors (Validation)
-        new DiceColors(); return () => {
+        return () => {
             engine.destroy();
         };
+    }, []);
+
+    // Mobile Check
+    useEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.matchMedia("(max-width: 768px)").matches;
+            setIsMobile(mobile);
+            if (engineRef.current) {
+                engineRef.current.rollController.setSpawnOrigin(mobile ? 'bottom' : 'right');
+                // Adjust bounds for mobile? Mobile usually needs narrower width, deeper depth?
+                // Auto-fit handles screen size generally.
+            }
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     // Effect for Auto-Fit
@@ -67,30 +80,18 @@ function InnerApp() {
                 setBoundsDepth(Math.floor(depth));
             }
         };
-
         window.addEventListener('resize', handleResize);
-
-        // Initial fit
-        if (isAutoFit && engineRef.current) {
-            setTimeout(handleResize, 100);
-        }
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-        };
+        if (isAutoFit && engineRef.current) setTimeout(handleResize, 100);
+        return () => window.removeEventListener('resize', handleResize);
     }, [isAutoFit]);
 
-    // Effect for Debug Visibility
-    useEffect(() => {
-        if (engineRef.current) {
-            engineRef.current.setDebugVisibility(showDebug);
-        }
-    }, [showDebug]);
+    // End AutoFit Effect logic if any trailing bits
+    // Debug effect removed
 
     const handleRoll = () => {
         if (engineRef.current) {
             setIsRolling(true);
-            setRollResult(null); // Clear previous
+            setRollResult(null);
             engineRef.current.rollController.roll(rollNotation);
         }
     };
@@ -105,16 +106,59 @@ function InnerApp() {
     const handleUpdateBounds = () => {
         if (engineRef.current) {
             engineRef.current.updateBounds(boundsWidth, boundsDepth);
-            setIsAutoFit(false); // Disable auto-fit if manual update
+            setIsAutoFit(false);
         }
     };
 
-    const handleAutoFitToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setIsAutoFit(e.target.checked);
-        // Effect will trigger auto update
+    // Button Logic
+    const addDice = (type: string) => {
+        const str = rollNotation.trim();
+        // Check if empty
+        if (!str) {
+            setRollNotation(`1${type}`);
+            return;
+        }
+        // Smart append: if ends with operator, just append. Else append + 1d...
+        if (str.match(/[+-]$/)) {
+            setRollNotation(`${str} 1${type}`);
+        } else {
+            setRollNotation(`${str} + 1${type}`);
+        }
+    };
+
+    const addMod = (val: number) => {
+        const str = rollNotation.trim();
+        // Check if ends in number
+        const match = str.match(/([+-])\s*(\d+)$/);
+        if (match) {
+            // Increment existing modifier
+            const sign = match[1] === '-' ? -1 : 1;
+            const num = parseInt(match[2]);
+            const total = (sign * num) + val;
+
+            // Replace suffix
+            const prefix = str.substring(0, match.index);
+            const newSign = total >= 0 ? '+' : '-';
+            setRollNotation(`${prefix}${newSign} ${Math.abs(total)}`);
+        } else {
+            // Append new modifier
+            const sign = val >= 0 ? '+' : '-';
+            setRollNotation(`${str} ${sign} ${Math.abs(val)}`);
+        }
+    };
+
+    const addSuffix = (suffix: string) => {
+        setRollNotation(prev => prev.trim() + suffix);
     };
 
     const textureKeys = Object.keys(TEXTURELIST);
+
+    // Button Styles
+    const btnStyle = {
+        background: '#444', color: '#fff', border: '1px solid #555',
+        borderRadius: '4px', cursor: 'pointer', padding: '8px',
+        fontWeight: 'bold', fontSize: '14px', flex: 1
+    };
 
     return (
         <div
@@ -127,119 +171,121 @@ function InnerApp() {
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 textures={textureKeys}
+                boundsWidth={boundsWidth} setBoundsWidth={setBoundsWidth}
+                boundsDepth={boundsDepth} setBoundsDepth={setBoundsDepth}
+                isAutoFit={isAutoFit} setIsAutoFit={setIsAutoFit}
+                onUpdateBounds={handleUpdateBounds}
             />
 
-            {/* UI OVERLAY */}
+            {/* UI OVERLAY - Dice Pool Maker */}
             <div style={{
                 position: 'absolute',
-                top: 20,
-                left: 20,
+                top: isMobile ? 'auto' : 20,
+                bottom: isMobile ? 20 : 'auto',
+                left: isMobile ? '50%' : 20,
+                transform: isMobile ? 'translateX(-50%)' : 'none',
+                width: isMobile ? '90%' : '320px',
                 color: 'white',
-                backgroundColor: 'rgba(0,0,0,0.6)',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                backdropFilter: 'blur(5px)',
                 padding: '15px',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 fontFamily: 'sans-serif',
-                zIndex: 10
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h2 style={{ margin: 0 }}>Anvil Dice</h2>
+                {/* Row 1: Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>🎲</span> Anvil Dice
+                    </h2>
                     <button
                         onClick={() => setIsSettingsOpen(true)}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px' }}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '4px' }}
                         title="Settings"
                     >
                         ⚙️
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                {/* Row 2: Input + Roll */}
+                <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                         type="text"
                         value={rollNotation}
                         onChange={(e) => setRollNotation(e.target.value)}
-                        style={{ padding: '5px', borderRadius: '4px', border: 'none', width: '60px' }}
+                        placeholder="e.g. 4d6"
+                        style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #555', background: '#222', color: 'white', fontSize: '16px' }}
                     />
-                    <button onClick={handleRoll} disabled={isRolling} style={{ padding: '5px 10px', cursor: 'pointer' }}>
+                    <button
+                        onClick={handleRoll}
+                        disabled={isRolling}
+                        style={{ ...btnStyle, background: isRolling ? '#555' : '#4a90e2', border: 'none', flex: 0.4 }}
+                    >
                         {isRolling ? '...' : 'ROLL'}
                     </button>
-                    <button onClick={handleClear} style={{ padding: '5px 10px', cursor: 'pointer' }}>
+                </div>
+
+                {/* Row 3: Result + Clear */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', borderRadius: '4px', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#aaa', fontSize: '12px' }}>RESULT</span>
+                        <span style={{ color: '#ffd700', fontSize: '20px', fontWeight: 'bold' }}>
+                            {rollResult ? rollResult.total : '-'}
+                        </span>
+                    </div>
+                    <button onClick={handleClear} style={{ ...btnStyle, background: '#333', flex: 0.3, fontSize: '12px' }}>
                         CLEAR
                     </button>
                 </div>
 
-                {/* RESULT DISPLAY */}
-                <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '4px' }}>
-                    <h3 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
-                        Result: <span style={{ color: '#ffd700' }}>
-                            {rollResult ? rollResult.total : (isRolling ? 'Rolling...' : '-')}
-                        </span>
-                    </h3>
-                    {rollResult && (
-                        <div style={{ fontSize: '12px', color: '#aaa', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                            {rollResult.breakdown.map((b, i) => (
-                                <span key={i} title={b.type} style={{ background: '#333', padding: '2px 4px', borderRadius: '3px' }}>
-                                    {b.value}
-                                </span>
-                            ))}
-                            {rollResult.modifier !== 0 && (
-                                <span style={{ background: '#334', padding: '2px 4px', borderRadius: '3px', color: '#aaf' }}>
-                                    {rollResult.modifier > 0 ? '+' : ''}{rollResult.modifier}
-                                </span>
-                            )}
-                        </div>
-                    )}
+                {/* Breakdown (Mini) */}
+                {rollResult && (
+                    <div style={{ fontSize: '12px', color: '#888', display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '60px', overflowY: 'auto' }}>
+                        {rollResult.breakdown.map((b, i) => (
+                            <span key={i} style={{
+                                background: b.dropped ? '#422' : '#333',
+                                color: b.dropped ? '#888' : '#eee',
+                                textDecoration: b.dropped ? 'line-through' : 'none',
+                                padding: '2px 5px', borderRadius: '3px'
+                            }}>
+                                {b.value}
+                            </span>
+                        ))}
+                        {rollResult.modifier !== 0 && (
+                            <span style={{ background: '#334', padding: '2px 5px', borderRadius: '3px', color: '#aaf' }}>
+                                {rollResult.modifier > 0 ? '+' : ''}{rollResult.modifier}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Row 4: Basic Dice */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '5px' }}>
+                    {['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map(d => (
+                        <button key={d} onClick={() => addDice(d)} style={btnStyle}>{d}</button>
+                    ))}
                 </div>
 
-                <div style={{ marginTop: '15px', borderTop: '1px solid #555', paddingTop: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
-                        <h4 style={{ margin: 0 }}>Bounds</h4>
-                        <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={isAutoFit}
-                                onChange={handleAutoFitToggle}
-                            />
-                            Auto
-                        </label>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginBottom: '5px' }}>
-                        <label>W:</label>
-                        <input
-                            type="number"
-                            value={boundsWidth}
-                            onChange={(e) => setBoundsWidth(Number(e.target.value))}
-                            disabled={isAutoFit}
-                            style={{ width: '40px', padding: '5px', borderRadius: '4px', border: 'none', opacity: isAutoFit ? 0.5 : 1 }}
-                        />
-                        <label>D:</label>
-                        <input
-                            type="number"
-                            value={boundsDepth}
-                            onChange={(e) => setBoundsDepth(Number(e.target.value))}
-                            disabled={isAutoFit}
-                            style={{ width: '40px', padding: '5px', borderRadius: '4px', border: 'none', opacity: isAutoFit ? 0.5 : 1 }}
-                        />
-                    </div>
-                    <button
-                        onClick={handleUpdateBounds}
-                        disabled={isAutoFit}
-                        style={{ width: '100%', padding: '5px', cursor: isAutoFit ? 'default' : 'pointer', opacity: isAutoFit ? 0.5 : 1 }}
-                    >
-                        UPDATE
-                    </button>
-
-                    <div style={{ marginTop: '10px' }}>
-                        <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={showDebug}
-                                onChange={(e) => setShowDebug(e.target.checked)}
-                            />
-                            Show Debug
-                        </label>
-                    </div>
+                {/* Row 5: Advanced Dice */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px' }}>
+                    <button onClick={() => addDice('d2')} style={btnStyle}>d2</button>
+                    <button onClick={() => addDice('d%')} style={btnStyle}>d%</button>
+                    <button onClick={() => addDice('d66')} style={btnStyle}>d66</button>
+                    <button onClick={() => addDice('d88')} style={btnStyle}>d88</button>
                 </div>
+
+                {/* Row 6: Modifiers */}
+                <div style={{ display: 'flex', gap: '5px' }}>
+                    <button onClick={() => addMod(1)} style={{ ...btnStyle, background: '#3a5' }}>+</button>
+                    <button onClick={() => addSuffix('kh')} style={btnStyle} title="Keep Highest">ADV</button>
+                    <button onClick={() => addSuffix('kl')} style={btnStyle} title="Keep Lowest">DIS</button>
+                    <button onClick={() => addMod(-1)} style={{ ...btnStyle, background: '#d44' }}>-</button>
+                </div>
+
             </div>
         </div>
     );

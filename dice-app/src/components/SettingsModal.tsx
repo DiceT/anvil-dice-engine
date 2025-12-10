@@ -3,13 +3,26 @@ import { useSettings } from '../store/SettingsContext';
 import { DicePreview } from './DicePreview';
 import type { SurfaceMaterial } from '../engine/types';
 
+
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    textures: string[]; // List of available texture keys
+    textures: string[];
+    // Bounds Props
+    boundsWidth: number;
+    setBoundsWidth: (w: number) => void;
+    boundsDepth: number;
+    setBoundsDepth: (d: number) => void;
+    isAutoFit: boolean;
+    setIsAutoFit: (auto: boolean) => void;
+    onUpdateBounds: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, textures }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+    isOpen, onClose, textures,
+    boundsWidth, setBoundsWidth, boundsDepth, setBoundsDepth,
+    isAutoFit, setIsAutoFit, onUpdateBounds
+}) => {
     const { settings, updateTheme, updatePhysics, setSoundVolume, resetSettings } = useSettings();
     const [activeTab, setActiveTab] = useState<'appearance' | 'behavior'>('appearance');
 
@@ -217,6 +230,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, t
                                 />
                                 <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>Adjust sound effects volume (0 to mute).</div>
                             </div>
+
+                            {/* BOUNDS Section (Moved from Overlay) */}
+                            <div style={{ borderTop: '1px solid #444', paddingTop: '20px', marginTop: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                                    <h3 style={{ margin: 0, fontSize: '16px', color: '#white' }}>Simulation Bounds</h3>
+                                    <label style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#aaa' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isAutoFit}
+                                            onChange={(e) => setIsAutoFit(e.target.checked)}
+                                        />
+                                        Auto-Fit to Screen
+                                    </label>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                                    <div>
+                                        <label style={{ marginRight: '10px', color: '#aaa' }}>Width:</label>
+                                        <input
+                                            type="number"
+                                            value={boundsWidth}
+                                            onChange={(e) => setBoundsWidth(Number(e.target.value))}
+                                            disabled={isAutoFit}
+                                            style={{ width: '60px', padding: '10px', borderRadius: '6px', background: '#333', border: '1px solid #555', color: 'white', opacity: isAutoFit ? 0.5 : 1 }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ marginRight: '10px', color: '#aaa' }}>Depth:</label>
+                                        <input
+                                            type="number"
+                                            value={boundsDepth}
+                                            onChange={(e) => setBoundsDepth(Number(e.target.value))}
+                                            disabled={isAutoFit}
+                                            style={{ width: '60px', padding: '10px', borderRadius: '6px', background: '#333', border: '1px solid #555', color: 'white', opacity: isAutoFit ? 0.5 : 1 }}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={onUpdateBounds}
+                                        disabled={isAutoFit}
+                                        style={{ padding: '10px 20px', background: '#555', border: 'none', color: 'white', borderRadius: '6px', cursor: isAutoFit ? 'default' : 'pointer', opacity: isAutoFit ? 0.5 : 1 }}
+                                    >
+                                        Update Bounds
+                                    </button>
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+                                    Defines the invisible walls around the dice.
+                                </div>
+                            </div>
+
                         </div>
                     )}
                 </div>

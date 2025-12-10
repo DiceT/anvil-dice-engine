@@ -1,9 +1,13 @@
 
 export interface DiceGroup {
     count: number;
-    sides: number | 'd%'; // 'd%' maps to 100 but triggers special handling
-    type: string; // 'd6', 'd100', 'd%''
+    sides: number | 'd%';
+    type: string;
+    keep?: 'highest' | 'lowest';
+    keepCount?: number;
 }
+
+
 
 export interface ParseResult {
     groups: DiceGroup[];
@@ -83,31 +87,32 @@ export class DiceParser {
 
         // Check if Dice
         if (content.includes('d')) {
+            // Split by 'd'
             const parts = content.split('d');
             const countStr = parts[0];
-            const sidesStr = parts[1];
+            let sidesStr = parts[1];
 
             let count = countStr === '' ? 1 : parseInt(countStr);
             if (isNaN(count)) count = 1;
-
-            // Handle negative dice count? Usually we treat 2d6-1d4 as valid.
-            // But rolling negative dice is weird. 
-            // Usually -1d4 means "Roll 1d4 and subtract total".
-            // So we parse as Count=1, Sides=4, Operation=Subtract.
-            // But ParseResult only has `count` and `sides`.
-            // If sign is negative, we should probably record it.
-            // But RollController usually spawns dice.
-            // If we spawn "negative dice", do they physically exist?
-            // "Subtract the result of 1d4".
-            // Physics engine rolls 1d4. The TOTAL is subtracted.
-            // So `DiceGroup` needs a `sign`? 
-            // Or `count` is -1? "Roll -1 d4"?
-            // Let's store `sign` in DiceGroup? Or assume `count` can be negative?
-            // "Roll -2 dice" -> Error.
-            // "Subtract result of 2 dice" -> Valid.
-            // Let's make Count signed.
-
             count *= sign;
+
+            // Check for Keep usage: kh (Keep Highest) or kl (Keep Lowest)
+            let keep: 'highest' | 'lowest' | undefined;
+            let keepCount: number | undefined;
+
+            if (sidesStr.includes('kh')) {
+                keep = 'highest';
+                const kp = sidesStr.split('kh');
+                sidesStr = kp[0];
+                const kCount = parseInt(kp[1]);
+                keepCount = isNaN(kCount) ? 1 : kCount;
+            } else if (sidesStr.includes('kl')) {
+                keep = 'lowest';
+                const kp = sidesStr.split('kl');
+                sidesStr = kp[0];
+                const kCount = parseInt(kp[1]);
+                keepCount = isNaN(kCount) ? 1 : kCount;
+            }
 
             // Sides
             let sides: number | 'd%';
@@ -119,7 +124,6 @@ export class DiceParser {
             } else {
                 const s = parseInt(sidesStr);
 
-                // Special Cases: d66 and d88
                 if (s === 66) {
                     sides = 66;
                     type = 'd66';
@@ -127,10 +131,10 @@ export class DiceParser {
                     sides = 88;
                     type = 'd88';
                 } else if (s === 100) {
-                    sides = 100; // Handled as d100 (single or percent)
+                    sides = 100;
                     type = 'd100';
                 } else {
-                    sides = isNaN(s) ? 6 : s; // Default d6
+                    sides = isNaN(s) ? 6 : s;
                     type = `d${sides}`;
                 }
             }
@@ -138,7 +142,9 @@ export class DiceParser {
             result.groups.push({
                 count: count,
                 sides: sides,
-                type: type
+                type: type,
+                keep,
+                keepCount
             });
 
         } else {

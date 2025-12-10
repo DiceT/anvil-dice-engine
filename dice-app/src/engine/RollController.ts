@@ -34,6 +34,8 @@ export class RollController {
     private isRolling = false;
     private currentModifier = 0;
     private currentNotation = "";
+    private currentParseResult: import('./DiceParser').ParseResult | null = null;
+    private spawnOrigin: 'right' | 'bottom' = 'right';
 
     constructor(physicsWorld: PhysicsWorld, scene: THREE.Scene) {
         this.physicsWorld = physicsWorld;
@@ -53,12 +55,17 @@ export class RollController {
         this.bounds = { width, depth };
     }
 
+    public setSpawnOrigin(origin: 'right' | 'bottom') {
+        this.spawnOrigin = origin;
+    }
+
     public roll(notation: string) {
         this.clear();
         this.isRolling = true;
         this.currentNotation = notation;
 
         const parsed = DiceParser.parse(notation);
+        this.currentParseResult = parsed;
         this.currentModifier = parsed.modifier;
 
         // Reset UI via callback (optional, or wait for finish)
@@ -135,7 +142,7 @@ export class RollController {
     private finishRoll() {
         // Aggregate Results
         let total = 0;
-        const breakdown: { type: string, value: number }[] = [];
+        const breakdown: { type: string, value: number, dropped?: boolean }[] = [];
 
         // Group dice by groupId to handle d%
         const groups = new Map<number, ActiveDie[]>();
@@ -201,18 +208,51 @@ export class RollController {
                     }
                 }
             } else {
-                // Standard
+                // Standard Dice
+                // Check Parsed Group for Keep Logic
+                const groupConfig = this.currentParseResult?.groups[dice[0].groupId];
+
+                // Collect values first to sort if needed
+                type DieRef = { die: ActiveDie, val: number };
+                let dieRefs: DieRef[] = [];
+
                 dice.forEach(d => {
                     let valStr = String(d.result);
                     let val = parseInt(valStr);
                     if (d.type === 'd10' && valStr === '0') val = 10;
                     if (d.type === 'd100' && valStr === '00') val = 0;
-
-                    if (!isNaN(val)) {
-                        total += val;
-                        breakdown.push({ type: d.type, value: val });
-                    }
+                    if (isNaN(val)) val = 0;
+                    dieRefs.push({ die: d, val: val });
                 });
+
+                // Apply Keep Logic
+                if (groupConfig && groupConfig.keep) {
+                    // Sort
+                    if (groupConfig.keep === 'highest') {
+                        // Descending
+                        dieRefs.sort((a, b) => b.val - a.val);
+                    } else {
+                        // Lowest -> Ascending
+                        dieRefs.sort((a, b) => a.val - b.val);
+                    }
+
+                    const keepCount = groupConfig.keepCount || 1;
+
+                    dieRefs.forEach((ref, index) => {
+                        const kept = index < keepCount;
+                        if (kept) {
+                            total += ref.val;
+                        }
+                        breakdown.push({ type: ref.die.type, value: ref.val, dropped: !kept });
+                    });
+
+                } else {
+                    // Standard Sum
+                    dieRefs.forEach(ref => {
+                        total += ref.val;
+                        breakdown.push({ type: ref.die.type, value: ref.val, dropped: false });
+                    });
+                }
             }
         });
 
@@ -299,16 +339,47 @@ export class RollController {
             // Use Current Theme
             const mesh = this.diceForge.createdice(meshType, this.currentTheme);
 
-            // ROLL FROM SIDE: Spawn at edge of CURRENT bounds
-            const wallX = this.bounds.width / 2;
-            const spawnX = wallX - 1;
+            // Spawn Position based on spawnOrigin
+            let x = 0, y = 0, z = 0;
+            let vx = 0, vy = 0, vz = 0;
+            const throwForce = (this.currentPhysics.throwForce || 40) + Math.random() * 5;
 
-            const safeZ = (this.bounds.depth / 2) - 3;
-            const spread = safeZ > 0 ? safeZ * 2 : 2;
+            if (this.spawnOrigin === 'bottom') {
+                // Spawn at +Z (assuming +Z is "bottom" of screen in top-down view)
+                // Bounds Depth / 2 = Bottom wall
+                const wallZ = this.bounds.depth / 2;
+                const spawnZ = wallZ - 1; // Just inside
 
-            const x = spawnX + (Math.random() - 0.5) * 1;
-            const y = 2 + Math.random() * 1;
-            const z = (Math.random() - 0.5) * spread;
+                // Spread along X axis
+                const safeX = (this.bounds.width / 2) - 4;
+                const spread = safeX > 0 ? safeX * 2 : 5;
+
+                x = (Math.random() - 0.5) * spread;
+                y = 5 + Math.random() * 2; // Higher drop
+                z = spawnZ + (Math.random() * 2); // Slightly varied
+
+                // Velocity: -Z (towards center/top)
+                vx = (Math.random() - 0.5) * 5; // Slight drift
+                vy = 0; // Gravity does the rest
+                vz = -throwForce;
+
+            } else {
+                // Default: Right Side (+X)
+                const wallX = this.bounds.width / 2;
+                const spawnX = wallX - 1;
+
+                const safeZ = (this.bounds.depth / 2) - 3;
+                const spread = safeZ > 0 ? safeZ * 2 : 2;
+
+                x = spawnX + (Math.random() - 0.5) * 1;
+                y = 2 + Math.random() * 1;
+                z = (Math.random() - 0.5) * spread;
+
+                // Velocity: -X (towards left)
+                vx = -throwForce;
+                vy = 0;
+                vz = (Math.random() - 0.5) * 2;
+            }
 
             mesh.position.set(x, y, z);
             mesh.castShadow = true;
@@ -335,12 +406,8 @@ export class RollController {
                 Math.random() * Math.PI * 2
             );
 
-            // Add Force/Spin from Settings
-            const baseForce = this.currentPhysics.throwForce || 40;
-            const throwStrength = baseForce + Math.random() * 5;
-
-            // Velocity towards center (negative X)
-            const velocity = new CANNON.Vec3(-throwStrength, 0, (Math.random() - 0.5) * 2);
+            // Velocity set above
+            const velocity = new CANNON.Vec3(vx, vy, vz);
 
             body.velocity.copy(velocity);
             body.angularVelocity.set((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20);
