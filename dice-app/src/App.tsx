@@ -100,6 +100,7 @@ function InnerApp() {
         if (engineRef.current) {
             engineRef.current.rollController.clear();
             setRollResult(null);
+            setRollNotation("");
         }
     };
 
