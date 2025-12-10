@@ -114,11 +114,24 @@ function InnerApp() {
     // Button Logic
     const addDice = (type: string) => {
         const str = rollNotation.trim();
-        // Check if empty
+
         if (!str) {
             setRollNotation(`1${type}`);
             return;
         }
+
+        // Check if we can increment the last die term (e.g. 1d6 -> 2d6)
+        const escapedType = type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(\\d+)${escapedType}$`);
+        const match = str.match(regex);
+
+        if (match && match.index !== undefined) {
+            const count = parseInt(match[1], 10);
+            const prefix = str.substring(0, match.index);
+            setRollNotation(`${prefix}${count + 1}${type}`);
+            return;
+        }
+
         // Smart append: if ends with operator, just append. Else append + 1d...
         if (str.match(/[+-]$/)) {
             setRollNotation(`${str} 1${type}`);
