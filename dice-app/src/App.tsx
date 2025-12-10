@@ -1,20 +1,11 @@
 import { useRef, useEffect, useState } from 'react';
 import { EngineCore } from './engine/core/EngineCore';
 import { DiceColors, TEXTURELIST } from './engine/DiceColors';
-import { SettingsProvider, useSettings } from './store/SettingsContext';
+import { SettingsProvider } from './store/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
 import type { RollResult } from './engine/types';
 
-// Helper to bridge React Settings -> Engine
-const SettingsSync: React.FC<{ engine: EngineCore | null }> = ({ engine }) => {
-    const { settings } = useSettings();
-    useEffect(() => {
-        if (engine) {
-            engine.updateSettings(settings);
-        }
-    }, [engine, settings]);
-    return null;
-};
+import { SettingsSync } from './components/SettingsSync';
 
 // Main App Internal (Logic)
 function InnerApp() {

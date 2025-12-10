@@ -6,6 +6,8 @@
   "author": "T Guiles and The Architect",
   "description": "Advanced 3D Dice Engine for Anvil & Loom",
   "license": "UNLICENSED",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "dev": "vite",
     "server": "tsx server/index.ts",
@@ -13,17 +15,19 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "three": ">=0.124.0"
+  },
   "dependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "cannon-es": "^0.20.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "three": "^0.124.0",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
@@ -39,6 +43,9 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.124.0"
   }
 }
