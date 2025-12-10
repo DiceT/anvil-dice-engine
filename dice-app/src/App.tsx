@@ -89,6 +89,8 @@ function InnerApp() {
     // Debug effect removed
 
     const handleRoll = () => {
+        if (!rollNotation.trim()) return;
+
         if (engineRef.current) {
             setIsRolling(true);
             setRollResult(null);

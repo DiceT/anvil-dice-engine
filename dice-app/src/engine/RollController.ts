@@ -92,6 +92,12 @@ export class RollController {
                 }
             }
         });
+
+        // If no dice were spawned (e.g. only modifiers or empty), finish immediately
+        if (this.activeDice.length === 0) {
+            this.isRolling = false;
+            this.finishRoll();
+        }
     }
 
     public clear() {
