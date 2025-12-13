@@ -21,6 +21,19 @@ export class DiceForge {
     private static readonly D8_LABELS = ['1', '7', '5', '3', '6', '4', '2', '8'];
     private static readonly D80_LABELS = ['10', '70', '50', '30', '60', '40', '20', '80']; // Tens d8
 
+    private static readonly D14_LABELS = [
+        '1', '13', '5', '9', '7', '3', '11',   // Top Hemisphere
+        '8', '12', '4', '14', '2', '10', '6'   // Bottom Hemisphere
+    ];
+    private static readonly D16_LABELS = [
+        '1', '15', '3', '7', '11', '9', '5', '13',  // Top Hemisphere (1-8)
+        '8', '4', '12', '16', '2', '14', '10', '6'  // Bottom Hemisphere (9-16)
+    ];
+    private static readonly D18_LABELS = [
+        '1', '17', '3', '13', '7', '9', '11', '5', '15',  // Top Hemisphere (1-9)
+        '10', '8', '14', '4', '18', '2', '16', '6', '12'  // Bottom Hemisphere (10-18)
+    ];
+
     // D10: Swapped 3<->5<->7 to fix order (1,5,7,3,9 -> 1,7,3,5,9)
     private static readonly D10_LABELS = ['1', '2', '5', '4', '7', '6', '3', '8', '9', '0'];
     private static readonly D12_LABELS = ['1', '11', '7', '9', '10', '5', '8', '3', '4', '6', '2', '12'];
@@ -69,6 +82,18 @@ export class DiceForge {
             case 'd10':
                 geometry = this.getGeometry('d10', 1.0 * scale);
                 baseLabels = DiceForge.D10_LABELS;
+                break;
+            case 'd14':
+                geometry = this.getGeometry('d14', 1.0 * scale);
+                baseLabels = DiceForge.D14_LABELS;
+                break;
+            case 'd16':
+                geometry = this.getGeometry('d16', 1.0 * scale);
+                baseLabels = DiceForge.D16_LABELS;
+                break;
+            case 'd18':
+                geometry = this.getGeometry('d18', 1.0 * scale);
+                baseLabels = DiceForge.D18_LABELS;
                 break;
             case 'd12':
                 geometry = this.getGeometry('d12', 0.9 * scale);
@@ -136,6 +161,7 @@ export class DiceForge {
         }
         const labels = [...baseLabels];
         if (type === 'd10' || type === 'd100') { labels.unshift(''); }
+        else if (type === 'd14' || type === 'd16' || type === 'd18') { labels.unshift(''); }
         else { labels.unshift(''); labels.unshift(''); }
         return labels;
     }
@@ -152,6 +178,9 @@ export class DiceForge {
             case 'd100': geom = this.create_d10_geometry(radius); break; // Reuse D10 geometry
             case 'd12': geom = this.create_d12_geometry(radius); break;
             case 'd20': geom = this.create_d20_geometry(radius); break;
+            case 'd14': geom = this.create_trapezohedron_geometry(radius, 7); break;
+            case 'd16': geom = this.create_trapezohedron_geometry(radius, 8); break;
+            case 'd18': geom = this.create_trapezohedron_geometry(radius, 9); break;
         }
         if (geom) { this.geometryCache[type] = geom; return geom; }
         throw new Error(`Failed to create geometry for ${type}`);
@@ -236,6 +265,13 @@ export class DiceForge {
             // Reduce font size for double-digit dice types (d100, d80, d60)
             if (type === 'd100' || type === 'd80' || type === 'd60') {
                 fontScale *= 0.6; // 40% reduction
+            }
+
+            // Reduce font size for custom trapezohedrons (crowded faces)
+            if (type === 'd14') {
+                fontScale *= 0.75; // 25% reduction
+            } else if (type === 'd16' || type === 'd18') {
+                fontScale *= 0.55; // ~45% reduction (Another 25% relative or absolute? going with significant drop)
             }
             // Draw Text Function (Reused for Bump)
             const drawText = (context: CanvasRenderingContext2D) => {
@@ -644,5 +680,48 @@ export class DiceForge {
         [3, 9, 4, 11], [3, 4, 2, 12], [3, 2, 6, 13], [3, 6, 8, 14], [3, 8, 9, 15],
         [4, 9, 5, 16], [2, 4, 11, 17], [6, 2, 10, 18], [8, 6, 7, 19], [9, 8, 1, 20]];
         return this.create_geom(vertices, faces, radius, -0.2, -Math.PI / 4 / 2);
+    }
+
+    private create_trapezohedron_geometry(radius: number, sides: number) {
+        // sides = N. Ring Count = 2N.
+        // Goal: Labels 1..N are Top Faces. Labels N+1..2N are Bot Faces.
+
+        var ringCount = sides * 2;
+        var h = 0.105;
+        var angleStep = Math.PI * 2 / ringCount;
+
+        var vertices = [];
+
+        // Ring
+        for (var i = 0, b = 0; i < ringCount; ++i, b += angleStep) {
+            vertices.push([Math.cos(b), Math.sin(b), h * (i % 2 ? 1 : -1)]);
+        }
+        // Poles
+        vertices.push([0, 0, -1]); // Index 2N (Bottom Pole)
+        vertices.push([0, 0, 1]);  // Index 2N+1 (Top Pole)
+
+        var faces = [];
+
+        // 1. Top Faces (Indices 0 to N-1 -> Labels 1 to N)
+        // Connected to Top Pole (2N+1). Centered on Even vertices.
+        for (let k = 0; k < sides; k++) {
+            let center = (k * 2); // 0, 2, 4...
+            let prev = (center - 1 + ringCount) % ringCount;
+            let next = (center + 1) % ringCount;
+            // Winding: Prev -> Center -> Next -> TopPole
+            faces.push([prev, center, next, ringCount + 1, k]);
+        }
+
+        // 2. Bot Faces (Indices N to 2N-1 -> Labels N+1 to 2N)
+        // Connected to Bot Pole (2N). Centered on Odd vertices.
+        for (let k = 0; k < sides; k++) {
+            let center = (k * 2) + 1; // 1, 3, 5...
+            let prev = (center - 1 + ringCount) % ringCount;
+            let next = (center + 1) % ringCount;
+            // Winding: Next -> Center -> Prev -> BotPole
+            faces.push([next, center, prev, ringCount, sides + k]);
+        }
+
+        return this.make_d10_geom(vertices.map(v => new THREE.Vector3(v[0], v[1], v[2])), faces, radius, 0.3, Math.PI);
     }
 }

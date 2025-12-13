@@ -6,6 +6,7 @@ import { SettingsModal } from './components/SettingsModal';
 import type { RollResult } from './engine/types';
 
 import { SettingsSync } from './components/SettingsSync';
+import { DiceInspector } from './components/DiceInspector';
 
 // Main App Internal (Logic)
 function InnerApp() {
@@ -24,6 +25,7 @@ function InnerApp() {
 
     // Settings UI State
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
     // Initialize Engine (Run once)
     useEffect(() => {
@@ -169,8 +171,8 @@ function InnerApp() {
     // Button Styles
     const btnStyle = {
         background: '#444', color: '#fff', border: '1px solid #555',
-        borderRadius: '4px', cursor: 'pointer', padding: '8px',
-        fontWeight: 'bold', fontSize: '14px', flex: 1
+        borderRadius: '4px', cursor: 'pointer', padding: '4px 0px', // Tight padding
+        fontWeight: 'bold', fontSize: '13px', flex: 1
     };
 
     return (
@@ -190,6 +192,11 @@ function InnerApp() {
                 onUpdateBounds={handleUpdateBounds}
             />
 
+            <DiceInspector
+                isOpen={isInspectorOpen}
+                onClose={() => setIsInspectorOpen(false)}
+            />
+
             {/* UI OVERLAY - Dice Pool Maker */}
             <div style={{
                 position: 'absolute',
@@ -207,7 +214,7 @@ function InnerApp() {
                 zIndex: 10,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px',
+                gap: '8px',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
             }}>
                 {/* Row 1: Header */}
@@ -215,13 +222,22 @@ function InnerApp() {
                     <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>🎲</span> Anvil Dice
                     </h2>
-                    <button
-                        onClick={() => setIsSettingsOpen(true)}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '4px' }}
-                        title="Settings"
-                    >
-                        ⚙️
-                    </button>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                        <button
+                            onClick={() => setIsInspectorOpen(true)}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '4px' }}
+                            title="Inspect New Dice"
+                        >
+                            👁️
+                        </button>
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '4px' }}
+                            title="Settings"
+                        >
+                            ⚙️
+                        </button>
+                    </div>
                 </div>
 
                 {/* Row 2: Input + Roll */}
@@ -236,7 +252,7 @@ function InnerApp() {
                     <button
                         onClick={handleRoll}
                         disabled={isRolling}
-                        style={{ ...btnStyle, background: isRolling ? '#555' : '#4a90e2', border: 'none', flex: 0.4 }}
+                        style={{ ...btnStyle, background: isRolling ? '#555' : '#4a90e2', border: 'none', flex: 0.4, padding: '8px' }}
                     >
                         {isRolling ? '...' : 'ROLL'}
                     </button>
@@ -250,7 +266,7 @@ function InnerApp() {
                             {rollResult ? rollResult.total : '-'}
                         </span>
                     </div>
-                    <button onClick={handleClear} style={{ ...btnStyle, background: '#333', flex: 0.3, fontSize: '12px' }}>
+                    <button onClick={handleClear} style={{ ...btnStyle, background: '#333', flex: 0.3, fontSize: '12px', padding: '8px' }}>
                         CLEAR
                     </button>
                 </div>
@@ -277,18 +293,21 @@ function InnerApp() {
                 )}
 
                 {/* Row 4: Basic Dice */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '5px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px' }}>
                     {['d4', 'd6', 'd8', 'd10', 'd12', 'd20'].map(d => (
                         <button key={d} onClick={() => addDice(d)} style={btnStyle}>{d}</button>
                     ))}
                 </div>
 
-                {/* Row 5: Advanced Dice */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px' }}>
+                {/* Row 5: Advanced & Custom Dice */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
                     <button onClick={() => addDice('d2')} style={btnStyle}>d2</button>
                     <button onClick={() => addDice('d%')} style={btnStyle}>d%</button>
                     <button onClick={() => addDice('d66')} style={btnStyle}>d66</button>
                     <button onClick={() => addDice('d88')} style={btnStyle}>d88</button>
+                    <button onClick={() => addDice('d14')} style={btnStyle}>d14</button>
+                    <button onClick={() => addDice('d16')} style={btnStyle}>d16</button>
+                    <button onClick={() => addDice('d18')} style={btnStyle}>d18</button>
                 </div>
 
                 {/* Row 6: Modifiers */}
