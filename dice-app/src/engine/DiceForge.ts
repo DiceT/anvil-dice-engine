@@ -308,6 +308,7 @@ export class DiceForge {
 
             const tex = new THREE.CanvasTexture(canvas);
             tex.encoding = THREE.sRGBEncoding; // Fix: Treat canvas colors as sRGB input
+            tex.needsUpdate = true;
 
             // --- Bump Map Generation ---
             let bumpTex = tex; // Default to color map if no specific bump
@@ -336,6 +337,8 @@ export class DiceForge {
                 ctxBump.restore();
 
                 bumpTex = new THREE.CanvasTexture(canvasBump);
+                bumpTex.encoding = THREE.LinearEncoding; // Explicitly Linear for bump/data
+                bumpTex.needsUpdate = true;
             }
 
             // Use MeshPhysicalMaterial for advanced properties (Glass, Metal)
