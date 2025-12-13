@@ -27,7 +27,7 @@ export function DiceInspector({ isOpen, onClose }: DiceInspectorProps) {
         renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.outputEncoding = THREE.sRGBEncoding; // Required for web to match Electron
+        // No outputEncoding - match DicePreview.tsx exactly
         mountRef.current.appendChild(renderer.domElement);
 
         // 2. Lights (Restored to normal levels)

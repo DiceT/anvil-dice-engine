@@ -14,7 +14,7 @@ export class EngineCore {
     private lastTime: number = 0;
 
     constructor(container: HTMLElement) {
-        // Initialize Renderer
+        // Initialize Renderer (matching DicePreview.tsx which works in Electron)
         this.renderer = new THREE.WebGLRenderer({
             alpha: true,
             antialias: true
@@ -22,7 +22,7 @@ export class EngineCore {
         this.renderer.setSize(container.clientWidth, container.clientHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.outputEncoding = THREE.sRGBEncoding; // Required for web to match Electron
+        // No outputEncoding - match DicePreview.tsx exactly
         container.appendChild(this.renderer.domElement);
 
         // Initialize Systems
