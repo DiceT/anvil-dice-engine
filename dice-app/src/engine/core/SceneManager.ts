@@ -24,10 +24,10 @@ export class SceneManager {
         this.controls.enablePan = false;    // Locked pan
 
         // Setup Lights
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Restored
         this.scene.add(this.ambientLight);
 
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.2); // Restored
         this.directionalLight.position.set(5, 50, 5); // Overhead light
         this.directionalLight.castShadow = true;
         this.directionalLight.shadow.mapSize.width = 2048;

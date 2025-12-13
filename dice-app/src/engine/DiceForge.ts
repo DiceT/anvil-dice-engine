@@ -307,7 +307,7 @@ export class DiceForge {
             ctx.restore();
 
             const tex = new THREE.CanvasTexture(canvas);
-            tex.encoding = THREE.sRGBEncoding; // Fix: Treat canvas colors as sRGB input
+            tex.encoding = THREE.sRGBEncoding; // Mark canvas output as sRGB for proper color handling
             tex.needsUpdate = true;
 
             // --- Bump Map Generation ---
